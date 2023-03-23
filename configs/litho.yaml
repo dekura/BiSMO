@@ -1,0 +1,18 @@
+# @package _global_
+
+# specify here default configuration
+# order of defaults determines the order in which configs override each other
+defaults:
+  - _self_
+  - source: default.yaml
+  - lens: lens.yaml
+
+# Mask
+
+
+
+# TCC
+## 1. can be calculated
+## 2. can be get form storage
+
+

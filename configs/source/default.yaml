@@ -1,0 +1,9 @@
+_target_: src.models.litho.source.Source
+_partial_: True
+na: 1.35
+maskxpitch: 2000.0
+maskypitch: 2000.0
+sigma_out: 0.8
+sigma_in: 0.6
+smooth_deta: 0.03
+source_type: annular

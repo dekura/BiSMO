@@ -1,0 +1,7 @@
+_traget_: src.models.litho.lens.Lens
+na: 1.35
+nLiquid: 1.414
+wavelength: 193.0
+defocus: 0.0
+maskxpitch: 1000
+maskypitch: 1000

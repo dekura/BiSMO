@@ -4,8 +4,8 @@ import pyfftw
 import scipy.signal as sg
 from PIL import Image, ImageDraw
 
-from litho.config import PATH
-from litho.gdsii.library import Library
+from src.models.litho.config import PATH
+from src.models.litho.gdsii.library import Library
 
 
 class Mask:
@@ -19,7 +19,7 @@ class Mask:
         CD: used for method poly2mask, 45nm
 
     .. plot::
-       :include-source:
+        :include-source:
 
         import matplotlib.pyplot as plt
 

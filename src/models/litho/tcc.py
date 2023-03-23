@@ -3,9 +3,10 @@
 import numpy as np
 import pyfftw
 import scipy as sci
+import shelve
 
-from litho.lens import LensList
-from litho.source import Source
+from src.models.litho.lens import LensList
+from src.models.litho.source import Source
 
 
 class TCC:
@@ -84,6 +85,47 @@ class TCCList(TCC):
             self.svd()
             self.coefList.append(self.coefs)
             self.kernelList.append(self.kernels)
+
+
+class TCCDB:
+    def __init__(
+            self,
+            dbPath
+            ):
+        self.s = None
+        self.PSFList = []
+        self.order = None
+        self.focusList = []
+        self.focusCoef = []
+        self.kernelList = []
+        self.coefList = []
+        self.dbPath = dbPath
+
+    def save_db(self, tcclist):
+        self.s = tcclist.s
+        self.PSFList = tcclist.PSFList
+        self.order = tcclist.order
+        self.focusList = tcclist.focusList
+        self.focusCoef = tcclist.focusCoef
+        self.kernelList = tcclist.kernelList
+        self.coefList = tcclist.coefList
+
+        db = shelve.open(f"{self.dbPath}")
+        db["TCCList"] = self
+        db.close()
+        print(f"tcc list saved to {self.dbPath}")
+
+    def load_db(self):
+        db = shelve.open(f"{self.dbPath}")
+        tcclist = db["TCCList"]
+        self.s = tcclist.s
+        self.PSFList = tcclist.PSFList
+        self.order = tcclist.order
+        self.focusList = tcclist.focusList
+        self.focusCoef = tcclist.focusCoef
+        self.kernelList = tcclist.kernelList
+        self.coefList = tcclist.coefList
+        print(f"Load tcc list from {self.dbPath}")
 
 
 if __name__ == "__main__":

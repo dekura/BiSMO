@@ -8,7 +8,7 @@ import numpy as np
 import pyfftw
 import scipy.signal as sg
 
-from litho.image import ImageHopkins, ImageHopkinsList
+from src.models.litho.image import ImageHopkins, ImageHopkinsList
 
 
 class ILT:

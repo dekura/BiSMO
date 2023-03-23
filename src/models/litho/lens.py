@@ -1,21 +1,15 @@
 """
-Created on Mon Dec 29 2014
-@author: WenLv (wenlv@hust.edu.cn)
-
-NOTE: This is for Scalar Pupil Assumption, not Jones Pupil
-      LensList is a Lens container, used for, e.g., robust mask synthesis
+NOTE: This is for Scalar Pupil Assumption, not Jones Pupil 
+LensList is a Lens container, used for, e.g., robust mask synthesis
 """
 
 import copy
-
 import numpy as np
-
-from litho.zernike import zerniken
+from src.models.litho.zernike import zerniken
 
 
 class Lens:
     """Model lens
-
     Args:
         na : 1.35
         nLiquid : 1.414
@@ -28,12 +22,12 @@ class Lens:
 
     def __init__(
         self,
-        na=1.35,
-        nLiquid=1.414,
-        wavelength=193.0,
-        defocus=0.0,
-        maskxpitch=1000,
-        maskypitch=1000,
+        na: float = 1.35,
+        nLiquid: float = 1.414,
+        wavelength: float = 193.0,
+        defocus: float = 0.0,
+        maskxpitch: float = 1000,
+        maskypitch: float = 1000,
     ):
         self.na = na
         self.nLiquid = nLiquid

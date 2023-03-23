@@ -27,16 +27,16 @@ class Source:
 
     def __init__(
         self,
-        na=1.35,
-        wavelength=193.0,
-        maskxpitch=2000.0,
-        maskypitch=2000.0,
-        sigma_out=0.8,
-        sigma_in=0.6,
-        smooth_deta=0.03,
-        shiftAngle=math.pi / 4,
-        openAngle=math.pi / 16,
-        source_type="annular",
+        na: float = 1.35,
+        wavelength: float = 193.0,
+        maskxpitch: float = 2000.0,
+        maskypitch: float = 2000.0,
+        sigma_out:  float = 0.8,
+        sigma_in:   float = 0.6,
+        smooth_deta: float = 0.03,
+        source_type: str = "annular",
+        shiftAngle: float =  math.pi / 4,
+        openAngle:  float = math.pi / 16,
     ):
         self.na = na
         self.wavelength = wavelength
@@ -96,22 +96,26 @@ class Source:
                     Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(1.0 * math.pi - np.abs(self.shiftAngle - self.theta)),
+                        - np.abs(1.0 * math.pi -
+                                 np.abs(self.shiftAngle - self.theta)),
                     )
                     + Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(0.5 * math.pi - np.abs(self.shiftAngle - self.theta)),
+                        - np.abs(0.5 * math.pi -
+                                 np.abs(self.shiftAngle - self.theta)),
                     )
                     + Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(-0.5 * math.pi - np.abs(self.shiftAngle - self.theta)),
+                        - np.abs(-0.5 * math.pi -
+                                 np.abs(self.shiftAngle - self.theta)),
                     )
                     + Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(-0.0 * math.pi - np.abs(self.shiftAngle - self.theta)),
+                        - np.abs(-0.0 * math.pi -
+                                 np.abs(self.shiftAngle - self.theta)),
                     )
                 )
                 * self.s0
@@ -183,22 +187,26 @@ class Source:
                     Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(1.0 * math.pi - np.abs(self.shiftAngle - self.theta)),
+                        - np.abs(1.0 * math.pi -
+                                 np.abs(self.shiftAngle - self.theta)),
                     )
                     + Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(0.5 * math.pi - np.abs(self.shiftAngle - self.theta)),
+                        - np.abs(0.5 * math.pi -
+                                 np.abs(self.shiftAngle - self.theta)),
                     )
                     + Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(-0.5 * math.pi - np.abs(self.shiftAngle - self.theta)),
+                        - np.abs(-0.5 * math.pi -
+                                 np.abs(self.shiftAngle - self.theta)),
                     )
                     + Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(-0.0 * math.pi - np.abs(self.shiftAngle - self.theta)),
+                        - np.abs(-0.0 * math.pi -
+                                 np.abs(self.shiftAngle - self.theta)),
                     )
                 )
                 * self.s0
@@ -231,7 +239,8 @@ class Source:
             self.mdata = s
         normlize = 1  # self.detaf * self.detag
         self.spatMutualData = (
-            np.fft.fftshift(np.fft.ifft2(np.fft.ifftshift(self.mdata))) * normlize
+            np.fft.fftshift(np.fft.ifft2(
+                np.fft.ifftshift(self.mdata))) * normlize
         )
 
 
