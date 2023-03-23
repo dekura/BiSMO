@@ -5,7 +5,6 @@ import scipy.signal as sg
 from PIL import Image, ImageDraw
 
 from litho.config import PATH
-from litho.consts import IMAGE_WH
 from litho.gdsii.library import Library
 
 
@@ -53,12 +52,11 @@ class Mask:
 
     """
 
-    def __init__(self, xmax=1024, ymax=1024, x_gridsize=1, y_gridsize=1, CD=45):
+    def __init__(self, xmax=500, ymax=500, x_gridsize=1, y_gridsize=1, CD=45):
         self.x_range = [-xmax, xmax]  # nm
         self.y_range = [-ymax, ymax]
         self.x_gridsize = x_gridsize  # nm
         self.y_gridsize = y_gridsize
-        self.mask_groups = []
         self.CD = CD
 
     def poly2mask(self):
@@ -93,7 +91,7 @@ class Mask:
         self.fft_mask = pyfftw.FFTW(self.spat_part, self.freq_part, axes=(0, 1))
 
     def openGDS(
-        self, gdsdir, layername, boundary=0.16, pixels_per_um=100, with_fft=False
+        self, gdsdir, layername, boundary=0.16, pixels_per_um=10, with_fft=False
     ):
 
         with open(gdsdir, "rb") as stream:
@@ -121,66 +119,33 @@ class Mask:
         xmax = max(xmax)
         ymin = min(ymin)
         ymax = max(ymax)
+        self.xmin = xmin - boundary * (xmax - xmin)
+        self.xmax = xmax + boundary * (xmax - xmin)
+        self.ymin = ymin - boundary * (ymax - ymin)
+        self.ymax = ymax + boundary * (ymax - ymin)
+        self.x_range = [self.xmin, self.xmax]
+        self.y_range = [self.ymin, self.ymax]
 
-        center_x = (xmax - xmin) // 2
-        center_y = (ymax - ymin) // 2
+        self.x_gridnum = int((self.xmax - self.xmin) / self.x_gridsize)
+        self.y_gridnum = int((self.ymax - self.ymin) / self.y_gridsize)
+        img = Image.new("L", (self.x_gridnum, self.y_gridnum), 0)
 
-        cpoints = []
+        self.perimeter = 0.0
+        for ii in self.polylist:
+            pp = np.array(ii)  # polygon
+            polygonlen = len(pp)
+            self.perimeter += np.sum(np.abs(pp[0:-1] - pp[1:polygonlen]))
 
-        cx_r = np.arange(center_x, xmax, IMAGE_WH // 2)
-        cx_l = -np.arange(-center_x, -xmin, IMAGE_WH // 2)
-        cxs = np.hstack((cx_l, cx_r))
+            pp[:, 0] = (pp[:, 0] - self.xmin) / self.x_gridsize
+            pp[:, 1] = (pp[:, 1] - self.ymin) / self.y_gridsize
+            vetex_list = list(pp)
+            polygon = [tuple(y) for y in vetex_list]
+            ImageDraw.Draw(img).polygon(polygon, outline=1, fill=1)
 
-        cy_u = np.arange(center_y, ymax, IMAGE_WH // 2)
-        cy_d = -np.arange(-center_y, -ymin, IMAGE_WH // 2)
-        cys = np.hstack((cy_d, cy_u))
-        # cys = np.arange(ymin, ymax - IMAGE_WH // 2, IMAGE_WH // 2)
+            self.perimeter += np.sum(np.abs(pp[0:-1] - pp[1:polygonlen]))
 
-        for x in cxs:
-            for y in cys:
-                cpoints.append((x, y))
+        self.data = np.array(img)
 
-        cpoints = list(set(cpoints))
-        # center_x = (xmax - xmin) // 2
-        # center_y = (ymax - ymin) // 2
-        # xmin = center_x - (IMAGE_WH // 2)
-        # ymin = center_y - (IMAGE_WH // 2)
-        # xmax = xmin + IMAGE_WH
-        # ymax = ymin + IMAGE_WH
-
-        # spoints.append((xmin, ymin))
-
-        # print(spoints)
-
-        for cc in cpoints:
-            self.xmin = cc[0] - (IMAGE_WH // 2)
-            self.xmax = self.xmin + IMAGE_WH
-            self.ymin = cc[1] - (IMAGE_WH // 2)
-            self.ymax = self.ymin + IMAGE_WH
-            self.x_range = [self.xmin, self.xmax]
-            self.y_range = [self.ymin, self.ymax]
-
-            self.x_gridnum = int((self.xmax - self.xmin) / self.x_gridsize)
-            self.y_gridnum = int((self.ymax - self.ymin) / self.y_gridsize)
-            img = Image.new("L", (self.x_gridnum, self.y_gridnum), 0)
-
-            self.perimeter = 0.0
-            for ii in self.polylist:
-                pp = np.array(ii)  # polygon
-                polygonlen = len(pp)
-                self.perimeter += np.sum(np.abs(pp[0:-1] - pp[1:polygonlen]))
-
-                pp[:, 0] = (pp[:, 0] - self.xmin) / self.x_gridsize
-                pp[:, 1] = (pp[:, 1] - self.ymin) / self.y_gridsize
-                vetex_list = list(pp)
-                polygon = [tuple(y) for y in vetex_list]
-                ImageDraw.Draw(img).polygon(polygon, outline=1, fill=1)
-
-                self.perimeter += np.sum(np.abs(pp[0:-1] - pp[1:polygonlen]))
-
-            self.mask_groups.append(np.array(img))
-
-        self.data = self.mask_groups[0]
         # Fourier transform pair, pyfftw syntax
         self.spat_part = pyfftw.empty_aligned(
             (self.y_gridnum, self.x_gridnum), dtype="complex128"
@@ -202,7 +167,7 @@ class Mask:
     def smooth(self):
         xx = np.linspace(-1, 1, 21)
         X, Y = np.meshgrid(xx, xx)
-        R = X**2 + Y**2
+        R = X ** 2 + Y ** 2
         G = np.exp(-10 * R)
         D = sg.convolve2d(0.9 * self.data + 0.05, G, "same") / np.sum(G)
         self.sdata = D

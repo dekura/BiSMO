@@ -53,9 +53,9 @@ class Source:
     def update(self):
         self.detaf = self.wavelength / (self.maskxpitch * self.na)
         self.detag = self.wavelength / (self.maskypitch * self.na)
-
         self.fnum = int(np.ceil(2 / self.detaf))
         self.gnum = int(np.ceil(2 / self.detag))
+
         fx = np.linspace(
             -self.fnum * self.detaf, self.fnum * self.detaf, 2 * self.fnum + 1
         )
@@ -64,11 +64,11 @@ class Source:
         )
         FX, FY = np.meshgrid(fx, fy, indexing="xy")
 
-        r = np.sqrt(FX**2 + FY**2)
+        r = np.sqrt(FX ** 2 + FY ** 2)
         theta = np.arctan2(FY, FX)
         theta[r > 1] = 0
         r[r > 1] = 0
-        s0 = np.sqrt(FX**2 + FY**2)
+        s0 = np.sqrt(FX ** 2 + FY ** 2)
         s0[s0 <= 1] = 1
         s0[s0 > 1] = 0
 
@@ -152,11 +152,11 @@ class Source:
         )
         FX, FY = np.meshgrid(fx, fy, indexing="xy")
 
-        r = np.sqrt(FX**2 + FY**2)
+        r = np.sqrt(FX ** 2 + FY ** 2)
         theta = np.arctan2(FY, FX)
         theta[r > 1] = 0
         r[r > 1] = 0
-        s0 = np.sqrt(FX**2 + FY**2)
+        s0 = np.sqrt(FX ** 2 + FY ** 2)
         s0 = np.where(s0 > 1.0, 0.0, 1.0)
 
         self.r = r

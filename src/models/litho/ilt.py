@@ -114,8 +114,8 @@ class ILT:
     def mask_init(self):
         x = np.linspace(-10, 10, 21)
         X, Y = np.meshgrid(x, x)
-        R = X**2 + Y**2
-        field = np.exp(-R / 2 / (4**2))
+        R = X ** 2 + Y ** 2
+        field = np.exp(-R / 2 / (4 ** 2))
         OO = field / np.sum(field)
         D = sg.fftconvolve(1.0 * self.image.mask.data + 0.0, OO, "same")
         # D = pyfftw.interfaces.scipy_fftpack.convolve(1.0*self.image.mask.data+0.0, OO,'same')

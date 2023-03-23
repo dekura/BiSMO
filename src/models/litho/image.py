@@ -2,7 +2,6 @@
 
 """
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pyfftw
 import scipy.signal as sg
@@ -38,18 +37,18 @@ class ImageHopkins:
             self.freq_part, self.spat_part, axes=(0, 1), direction="FFTW_BACKWARD"
         )
 
-    def calAI_Good_But_Not_implement(self):  # much faster than calAIold()
+    def calAI(self):  # much faster than calAIold()
         AI_freq_dense = np.zeros(
             (self.mask.y_gridnum, self.mask.x_gridnum), dtype=np.complex128
         )
         AI_freq_sparse = np.zeros(
             (int(self.y2 - self.y1), int(self.x2 - self.x1)), dtype=np.complex128
         )
-        self.x1 = int(self.x1)
-        self.x2 = int(self.x2)
-        self.y1 = int(self.y1)
-        self.y2 = int(self.y2)
         for ii in range(self.order):
+            self.x1 = int(self.x1)
+            self.x2 = int(self.x2)
+            self.y1 = int(self.y1)
+            self.y2 = int(self.y2)
             e_field = (
                 self.kernels[:, :, ii]
                 * self.mask.fdata[self.y1 : self.y2, self.x1 : self.x2]
@@ -58,23 +57,16 @@ class ImageHopkins:
                 np.conj(np.rot90(self.kernels[:, :, ii], 2))
                 * self.mask.fdata[self.y1 : self.y2, self.x1 : self.x2]
             )
-
             AA = sg.convolve2d(e_field, e_field_conj, "same", "wrap")
             AI_freq_sparse += self.coefs[ii] * AA
         AI_freq_dense[self.y1 : self.y2, self.x1 : self.x2] = AI_freq_sparse
-        # print(AI_freq_dense.shape)
+
         self.freq_part[:] = np.fft.ifftshift(AI_freq_dense)
-        # print(self.freq_part.shape)
         self.ifft_image()
-        # print(self.spat_part.shape)
         self.AI = np.real(np.fft.fftshift(self.spat_part)) / self.norm
 
-    def calAI(self):
+    def calAIold(self):
         AI = np.zeros((self.mask.y_gridnum, self.mask.x_gridnum))
-        self.x1 = int(self.x1)
-        self.x2 = int(self.x2)
-        self.y1 = int(self.y1)
-        self.y2 = int(self.y2)
         for ii in range(self.order):
             e_field = np.zeros(
                 (self.mask.y_gridnum, self.mask.x_gridnum), dtype=np.complex128
@@ -85,13 +77,10 @@ class ImageHopkins:
             )
             AA = np.fft.fftshift(np.fft.ifft2(np.fft.ifftshift(e_field)))
             AI += self.coefs[ii] * np.abs(AA * np.conj(AA))
-        self.AI = AI / self.order
-
-    # def calRI(self):
-    #     self.RI = 1 / (1 + np.exp(-self.resist_a * (self.AI - self.resist_t)))
+        self.AI = AI
 
     def calRI(self):
-        self.RI = (self.AI >= self.resist_t).astype(np.float64)
+        self.RI = 1 / (1 + np.exp(-self.resist_a * (self.AI - self.resist_t)))
 
 
 class ImageHopkinsList(ImageHopkins):
@@ -136,7 +125,6 @@ class ImageHopkinsList(ImageHopkins):
             self.RIList.append([])
             for jj in self.doseList:
                 self.resist_t = self.resist_tRef * jj
-                print("resist: ", self.resist_t)
                 self.calRI()
                 self.RIList[ii].append(self.RI)
 
@@ -185,21 +173,6 @@ if __name__ == "__main__":
     m.poly2mask()
     m.smooth()
     m.maskfft()
-
-    plt.imshow(
-        m.data,
-        extent=(m.x_range[0], m.x_range[1], m.y_range[0], m.y_range[1]),
-        cmap="hot",
-        interpolation="none",
-    )
-    plt.figure()
-    plt.imshow(
-        m.sdata,
-        extent=(m.x_range[0], m.x_range[1], m.y_range[0], m.y_range[1]),
-        cmap="hot",
-        interpolation="none",
-    )
-    plt.show()
 
     """nominal ILT setting"""
     s = Source()
