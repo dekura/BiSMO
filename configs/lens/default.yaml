@@ -1,7 +1,7 @@
-_traget_: src.models.litho.lens.Lens
+_target_: src.models.litho.lens.LensList
 na: 1.35
 nLiquid: 1.414
 wavelength: 193.0
 defocus: 0.0
-maskxpitch: 1000
-maskypitch: 1000
+maskxpitch: 2000
+maskypitch: 2000

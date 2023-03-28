@@ -1,0 +1,10 @@
+_target_: src.models.litho.mask.Mask
+xmax: 1024
+ymax: 1024
+x_gridsize: 1
+y_gridsize: 1
+gds_path: ${paths.data_dir}/NanGateLibGDS/NOR2_X2.gds
+layername: 11
+boundary: 0.16
+pixels_per_um: 10
+CD: 45

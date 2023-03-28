@@ -52,12 +52,27 @@ class Mask:
 
     """
 
-    def __init__(self, xmax=500, ymax=500, x_gridsize=1, y_gridsize=1, CD=45):
+    def __init__(
+            self,
+            gds_path: str,
+            layername: int,
+            boundary: 0.16,
+            pixels_per_um: 10,
+            xmax=500,
+            ymax=500,
+            x_gridsize=1,
+            y_gridsize=1,
+            CD=45,
+            ):
         self.x_range = [-xmax, xmax]  # nm
         self.y_range = [-ymax, ymax]
         self.x_gridsize = x_gridsize  # nm
         self.y_gridsize = y_gridsize
         self.CD = CD
+        self.gds_path = gds_path
+        self.layername = layername
+        self.boundary = boundary
+        self.pixels_per_um = pixels_per_um
 
     def poly2mask(self):
         """Get Pixel-based Mask Image from Polygon Data
@@ -90,10 +105,12 @@ class Mask:
         )
         self.fft_mask = pyfftw.FFTW(self.spat_part, self.freq_part, axes=(0, 1))
 
-    def openGDS(
-        self, gdsdir, layername, boundary=0.16, pixels_per_um=10, with_fft=False
-    ):
-
+    #TODO: how to handle the gds path
+    def openGDS(self):
+        gdsdir = self.gds_path
+        layername = self.layername
+        boundary = self.boundary
+        pixels_per_um = self.pixels_per_um
         with open(gdsdir, "rb") as stream:
             lib = Library.load(stream)
 

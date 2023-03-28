@@ -1,5 +1,5 @@
 """
-NOTE: This is for Scalar Pupil Assumption, not Jones Pupil 
+NOTE: This is for Scalar Pupil Assumption, not Jones Pupil
 LensList is a Lens container, used for, e.g., robust mask synthesis
 """
 
@@ -86,8 +86,18 @@ class LensList(Lens):
     List of lens
     """
 
-    def __init__(self):
-        Lens.__init__(self)
+    def __init__(
+        self,
+        na: float = 1.35,
+        nLiquid: float = 1.414,
+        wavelength: float = 193.0,
+        defocus: float = 0.0,
+        maskxpitch: float = 1000,
+        maskypitch: float = 1000,
+    ):
+        super(LensList, self).__init__(
+            na, nLiquid, wavelength, defocus, maskxpitch, maskypitch
+        )
         self.focusList = [0.0]
         self.focusCoef = [1.0]
         self.fDataList = []

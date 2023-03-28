@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-03-23 14:56:21
-LastEditTime: 2023-03-23 14:56:51
+LastEditTime: 2023-03-28 17:09:36
 Contact: cgjcuhk@gmail.com
 Description: Litho Main Function
 """
@@ -10,7 +10,8 @@ from typing import List, Tuple
 
 import hydra
 import pyrootutils
-from lightning import LightningDataModule, LightningModule, Trainer
+# from lightning import LightningDataModule, LightningModule, Trainer
+# from src.models.litho import Source, LensList, TCCList, Mask, AerialList
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig
 
@@ -33,12 +34,13 @@ pyrootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 # ------------------------------------------------------------------------------------ #
 
 from src import utils
+from src.models.litho import Source, LensList, TCCList, Mask, AerialList
 
 log = utils.get_pylogger(__name__)
 
 
 @utils.task_wrapper
-def evaluate(cfg: DictConfig) -> Tuple[dict, dict]:
+def litho(cfg: DictConfig) -> Tuple[dict, dict]:
     """Evaluates given checkpoint on a datamodule testset.
 
     This method is wrapped in optional @task_wrapper decorator, that controls the behavior during
@@ -51,50 +53,73 @@ def evaluate(cfg: DictConfig) -> Tuple[dict, dict]:
         Tuple[dict, dict]: Dict with metrics and dict with all instantiated objects.
     """
 
-    assert cfg.ckpt_path
+    # assert cfg.ckpt_path
+    #TODO What should be assert?
 
-    log.info(f"Instantiating datamodule <{cfg.data._target_}>")
-    datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data)
+    log.info(f"Instantiating Source <{cfg.source._target_}>")
+    s: Source = hydra.utils.instantiate(cfg.source)
+    s.update()
+    s.ifft()
 
-    log.info(f"Instantiating model <{cfg.model._target_}>")
-    model: LightningModule = hydra.utils.instantiate(cfg.model)
+    log.info(f"Instantiating Lens <{cfg.lens._target_}>")
+    o: LensList = hydra.utils.instantiate(cfg.lens)
+    o.calculate()
 
     log.info("Instantiating loggers...")
     logger: List[Logger] = utils.instantiate_loggers(cfg.get("logger"))
 
-    log.info(f"Instantiating trainer <{cfg.trainer._target_}>")
-    trainer: Trainer = hydra.utils.instantiate(cfg.trainer, logger=logger)
+    log.info(f"Instantiating TCCList <{cfg.tcc._target_}>")
+    t: TCCList = hydra.utils.instantiate(cfg.tcc, source=s, lensList=o)
+    t.calculate()
+
+    log.info(f"Instantiating Mask <{cfg.mask._target_}>")
+    m: Mask = hydra.utils.instantiate(cfg.mask)
+    m.openGDS()
+    m.maskfft()
+
+    log.info(f"Instantiating Aerial and Resist <{cfg.aerial._target_}>")
+    a = AerialList(m, t)
+    a.image.resist_a = 100
+    a.image.resist_tRef = 0.12
+    a.image.doseList = [1]
+    a.image.doseCoef = [1]
+
 
     object_dict = {
         "cfg": cfg,
-        "datamodule": datamodule,
-        "model": model,
+        "source": s,
+        "lenslist": o,
         "logger": logger,
-        "trainer": trainer,
+        "TCCList": t,
     }
 
     if logger:
         log.info("Logging hyperparameters!")
         utils.log_hyperparameters(object_dict)
 
-    log.info("Starting testing!")
-    trainer.test(model=model, datamodule=datamodule, ckpt_path=cfg.ckpt_path)
+    log.info("Starting Litho!")
+    # trainer.test(model=model, datamodule=datamodule, ckpt_path=cfg.ckpt_path)
+    a.litho()
+    # a.show_AI(show=False, save=True)
+    a.show_AI(show=True, save=True)
+    # # a.show_RI(show=False, save=True)
+    a.show_RI(show=True, save=True)
 
     # for predictions use trainer.predict(...)
     # predictions = trainer.predict(model=model, dataloaders=dataloaders, ckpt_path=cfg.ckpt_path)
 
-    metric_dict = trainer.callback_metrics
+    # metric_dict = trainer.callback_metrics
+    return
+    # return metric_dict, object_dict
 
-    return metric_dict, object_dict
 
-
-@hydra.main(version_base="1.3", config_path="../configs", config_name="eval.yaml")
+@hydra.main(version_base="1.3", config_path="../configs", config_name="litho.yaml")
 def main(cfg: DictConfig) -> None:
     # apply extra utilities
     # (e.g. ask for tags if none are provided in cfg, print cfg tree, etc.)
     utils.extras(cfg)
 
-    evaluate(cfg)
+    litho(cfg)
 
 
 if __name__ == "__main__":

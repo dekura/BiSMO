@@ -1,5 +1,4 @@
 _target_: src.models.litho.source.Source
-_partial_: True
 na: 1.35
 maskxpitch: 2000.0
 maskypitch: 2000.0

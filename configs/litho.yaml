@@ -5,10 +5,21 @@
 defaults:
   - _self_
   - source: default.yaml
-  - lens: lens.yaml
+  - lens: default.yaml
+  - tcc: default.yaml
+  - mask: default.yaml
+  - logger: null
+  - paths: default.yaml
+  - extras: default.yaml
+  - hydra: default.yaml
 
 # Mask
+task_name: "litho"
 
+# tags to help you identify your experiments
+# you can overwrite this in experiment configs
+# overwrite from command line with `python train.py tags="[first_tag, second_tag]"`
+tags: ["dev"]
 
 
 # TCC
