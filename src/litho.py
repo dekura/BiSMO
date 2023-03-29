@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-03-23 14:56:21
-LastEditTime: 2023-03-28 17:09:36
+LastEditTime: 2023-03-28 22:54:22
 Contact: cgjcuhk@gmail.com
 Description: Litho Main Function
 """
@@ -78,7 +78,7 @@ def litho(cfg: DictConfig) -> Tuple[dict, dict]:
     m.maskfft()
 
     log.info(f"Instantiating Aerial and Resist <{cfg.aerial._target_}>")
-    a = AerialList(m, t)
+    a: AerialList = hydra.utils.instantiate(cfg.aerial)
     a.image.resist_a = 100
     a.image.resist_tRef = 0.12
     a.image.doseList = [1]
