@@ -59,7 +59,7 @@ class Lens:
         H = np.where(H > 1.0, 0.0, 1.0)
         R[R > 1.0] = 0.0
 
-        W = np.zeros((2 * self.gnum + 1, 2 * self.fnum + 1), dtype=np.complex)
+        W = np.zeros((2 * self.gnum + 1, 2 * self.fnum + 1), dtype=complex)
 
         for ii in range(len(self.Zn)):
             W = W + zerniken(self.Zn[ii], R, TH) * self.Cn[ii]

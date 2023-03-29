@@ -134,7 +134,7 @@ class ILT:
         self.grad = np.zeros((self.ysize, self.xsize))
 
         for ii in range(self.image.order):
-            e_field = np.zeros((self.ysize, self.xsize), dtype=np.complex)
+            e_field = np.zeros((self.ysize, self.xsize), dtype=complex)
             e_field[self.y1 : self.y2, self.x1 : self.x2] = (
                 self.image.kernels[:, :, ii]
                 * self.image.mask.fdata[self.y1 : self.y2, self.x1 : self.x2]
@@ -152,7 +152,7 @@ class ILT:
             # CC_F = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(CC)))
 
             DD_F = np.conj(np.rot90(self.image.kernels[:, :, ii], 2))
-            EE_F = np.zeros((self.ysize, self.xsize), dtype=np.complex)
+            EE_F = np.zeros((self.ysize, self.xsize), dtype=complex)
             EE_F[self.y1 : self.y2, self.x1 : self.x2] = (
                 DD_F * CC_F[self.y1 : self.y2, self.x1 : self.x2]
             )

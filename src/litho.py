@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-03-23 14:56:21
-LastEditTime: 2023-03-28 22:54:22
+LastEditTime: 2023-03-29 11:20:56
 Contact: cgjcuhk@gmail.com
 Description: Litho Main Function
 """
@@ -78,11 +78,24 @@ def litho(cfg: DictConfig) -> Tuple[dict, dict]:
     m.maskfft()
 
     log.info(f"Instantiating Aerial and Resist <{cfg.aerial._target_}>")
-    a: AerialList = hydra.utils.instantiate(cfg.aerial)
+    a: AerialList = hydra.utils.instantiate(cfg.aerial, mask=m, tccList=t)
     a.image.resist_a = 100
     a.image.resist_tRef = 0.12
     a.image.doseList = [1]
     a.image.doseCoef = [1]
+
+
+
+
+    log.info("Starting Litho!")
+    # trainer.test(model=model, datamodule=datamodule, ckpt_path=cfg.ckpt_path)
+    a.litho()
+    a.show_AI(show=False, save=True)
+    a.show_RI(show=False, save=True)
+
+    # for predictions use trainer.predict(...)
+    # predictions = trainer.predict(model=model, dataloaders=dataloaders, ckpt_path=cfg.ckpt_path)
+
 
 
     object_dict = {
@@ -91,26 +104,15 @@ def litho(cfg: DictConfig) -> Tuple[dict, dict]:
         "lenslist": o,
         "logger": logger,
         "TCCList": t,
+        'aerial': a
     }
 
     if logger:
         log.info("Logging hyperparameters!")
         utils.log_hyperparameters(object_dict)
-
-    log.info("Starting Litho!")
-    # trainer.test(model=model, datamodule=datamodule, ckpt_path=cfg.ckpt_path)
-    a.litho()
-    # a.show_AI(show=False, save=True)
-    a.show_AI(show=True, save=True)
-    # # a.show_RI(show=False, save=True)
-    a.show_RI(show=True, save=True)
-
-    # for predictions use trainer.predict(...)
-    # predictions = trainer.predict(model=model, dataloaders=dataloaders, ckpt_path=cfg.ckpt_path)
-
     # metric_dict = trainer.callback_metrics
-    return
     # return metric_dict, object_dict
+    return {}, object_dict
 
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="litho.yaml")
