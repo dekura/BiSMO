@@ -2,12 +2,12 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2022-10-17 11:50:53
-LastEditTime: 2023-03-23 11:15:02
+LastEditTime: 2023-03-29 18:43:54
 Contact: cgjcuhk@gmail.com
 Description: some utils for image loading.
 """
 from pathlib import Path
-
+import torch
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
@@ -34,9 +34,15 @@ def show_img(arr, name):
 def arr_bound(arr, name):
     rprint(f"\n=============[yellow]{name}[/yellow]================")
     rprint(arr)
+    min_wh = 7
+    if arr.shape[0] > min_wh:
+        lefti = arr.shape[0] // 2 - 4
+        rprint(f"\n*************[yellow]{name}[{lefti}:{lefti+min_wh},{lefti}:{lefti+min_wh}][/yellow]*************")
+        rprint(arr[lefti:lefti+min_wh,lefti:lefti+min_wh])
+        rprint(f"*************[yellow]{name}[{lefti}:{lefti+7},{lefti}:{lefti+7}][/yellow]*************\n")
     rprint(f"[yellow]{name}[/yellow].shape: {arr.shape}")
     rprint(f"[yellow]{name}[/yellow].dtype: {arr.dtype}")
-    rprint(f"[yellow]{name}[/yellow] [red]sum: {np.sum(arr)}")
+    rprint(f"[yellow]{name}[/yellow] [red]sum[/red]: {np.sum(arr)}")
     if arr.dtype == "complex128":
         rprint(f"[yellow]{name}.real[/yellow] sum: {np.sum(arr.real)}")
         rprint(f"[yellow]{name}.imag[/yellow] sum: {np.sum(arr.imag)}")
@@ -48,6 +54,38 @@ def arr_bound(arr, name):
         rprint(f"[yellow]{name}[/yellow] max: {np.max(arr)}")
         rprint(f"[yellow]{name}[/yellow] min: {np.min(arr)}")
     rprint(f"==============[yellow]{name}[/yellow]======================\n")
+
+
+def torch_arr_bound(arr, name):
+    rprint(f"\n=============[yellow]{name}[/yellow]================")
+    rprint(arr)
+    min_wh = 7
+    if arr.shape[0] > min_wh:
+        lefti = arr.shape[0] // 2 - 4
+        rprint(f"\n*************[yellow]{name}[{lefti}:{lefti+min_wh},{lefti}:{lefti+min_wh}][/yellow]*************")
+        rprint(arr[lefti:lefti+min_wh,lefti:lefti+min_wh])
+        rprint(f"*************[yellow]{name}[{lefti}:{lefti+7},{lefti}:{lefti+7}][/yellow]*************\n")
+    rprint(f"[yellow]{name}[/yellow].shape: {arr.shape}")
+    rprint(f"[yellow]{name}[/yellow].dtype: {arr.dtype}")
+    rprint(f"[yellow]{name}[/yellow] [red]sum[/red]: {torch.sum(arr)}")
+    print(arr.dtype)
+    if arr.dtype == torch.complex128:
+        rprint(f"[yellow]{name}.real[/yellow] sum: {torch.sum(arr.real)}")
+        rprint(f"[yellow]{name}.imag[/yellow] sum: {torch.sum(arr.imag)}")
+        rprint(f"[yellow]{name}.real[/yellow] max: {torch.max(arr.real)}")
+        rprint(f"[yellow]{name}.real[/yellow] min: {torch.min(arr.real)}")
+        rprint(f"[yellow]{name}.imag[/yellow] max: {torch.max(arr.imag)}")
+        rprint(f"[yellow]{name}.imag[/yellow] min: {torch.min(arr.imag)}")
+    else:
+        rprint(f"[yellow]{name}[/yellow] max: {torch.max(arr)}")
+        rprint(f"[yellow]{name}[/yellow] min: {torch.min(arr)}")
+    rprint(f"==============[yellow]{name}[/yellow]======================\n")
+
+
+def delta_np_torch(arr: np.array, tarr: torch.tensor):
+    t_np_arr = torch.from_numpy(arr)
+    rprint("=============[yellow]The delta is : [/yellow]=============")
+    rprint(f"{torch.sum(t_np_arr - tarr)}\n")
 
 
 def plot(ndarray):
