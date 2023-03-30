@@ -152,3 +152,4 @@ configs/local/default.yaml
 /outputs/
 # Aim logging
 .aim
+**_cmp.txt
