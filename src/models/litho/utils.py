@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2022-10-17 11:50:53
-LastEditTime: 2023-03-29 18:43:54
+LastEditTime: 2023-03-30 14:30:06
 Contact: cgjcuhk@gmail.com
 Description: some utils for image loading.
 """
@@ -33,7 +33,7 @@ def show_img(arr, name):
 
 def arr_bound(arr, name):
     rprint(f"\n=============[yellow]{name}[/yellow]================")
-    rprint(arr)
+    # rprint(arr)
     min_wh = 7
     if arr.shape[0] > min_wh:
         lefti = arr.shape[0] // 2 - 4
@@ -58,7 +58,7 @@ def arr_bound(arr, name):
 
 def torch_arr_bound(arr, name):
     rprint(f"\n=============[yellow]{name}[/yellow]================")
-    rprint(arr)
+    # rprint(arr)
     min_wh = 7
     if arr.shape[0] > min_wh:
         lefti = arr.shape[0] // 2 - 4
