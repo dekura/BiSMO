@@ -41,29 +41,37 @@ class TCC:
 
     def calSpatTCC(self):
         H = torch.reshape(self.psf, (torch.prod(torch.tensor(self.psf.shape)), 1))
-        self.tcc2d = (
-            self.jsource * torch.dot(H, H.transpose()) / self.s.detaf / self.s.detag
-        )
+        print(H.shape)
+        print(H.t().shape)
+        self.tcc2d = self.jsource * torch.matmul(H, H.t()) / self.s.detaf / self.s.detag
 
     def svd(self):
         self.spat_part = pyfftw.empty_aligned(
             (self.gnum, self.fnum, self.gnum, self.fnum), dtype="complex128"
         )
+        self.spat_part = torch.zeros(
+            (self.gnum, self.fnum, self.gnum, self.fnum), dtype=torch.complex128
+        )
         self.freq_part = pyfftw.empty_aligned(
             (self.gnum, self.fnum, self.gnum, self.fnum), dtype="complex128"
         )
-        self.fft_svd = pyfftw.FFTW(self.spat_part, self.freq_part, axes=(0, 1, 2, 3))
+        self.freq_part = torch.zeros(
+            (self.gnum, self.fnum, self.gnum, self.fnum), dtype=torch.complex128
+        )
+        # self.fft_svd = pyfftw.FFTW(self.spat_part, self.freq_part, axes=(0, 1, 2, 3))
 
         tcc4d = self.tcc2d.reshape((self.gnum, self.fnum, self.gnum, self.fnum))
         self.spat_part[:] = torch.fft.ifftshift(tcc4d)
-        self.fft_svd()
+        # self.fft_svd()
+
+        self.freq_part = torch.fft.fftn(self.spat_part)
         tcc4df = torch.fft.fftshift(self.freq_part)
         # tcc4df = torch.fft.fftshift(torch.fft.fftn(torch.fft.ifftshift(tcc4d)))
-
         tcc2df = tcc4df.reshape((self.gnum * self.fnum, self.gnum * self.fnum))
 
         # U,S,V = torch.linalg.svd(tcc2df)
-        U, S, V = sci.sparse.linalg.svds(tcc2df, self.order)  # faster than svd
+        U, S, V = torch.linalg.svd(tcc2df)  # faster than svd
+        # U, S, V = torch.svd_lowrank(tcc2df)  # faster than svd
         self.coefs = S[0 : self.order]
         self.kernels = torch.zeros((self.gnum, self.fnum, self.order), dtype=torch.complex128)
         for ii in range(self.order):
@@ -150,3 +158,7 @@ if __name__ == "__main__":
 
     tcc = TCCList(s, o)
     tcc.calculate()
+
+
+    # calculate the time for tcc
+    # save the tcc matrices.

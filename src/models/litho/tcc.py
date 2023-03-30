@@ -5,8 +5,10 @@ import pyfftw
 import scipy as sci
 import shelve
 
-from src.models.litho.lens import LensList
-from src.models.litho.source import Source
+# from src.models.litho.lens import LensList
+# from src.models.litho.source import Source
+from lens import LensList
+from source import Source
 
 
 class TCC:
@@ -38,6 +40,8 @@ class TCC:
 
     def calSpatTCC(self):
         H = np.reshape(self.psf, (self.psf.size, 1))
+        print(H.shape)
+        print(H.transpose().shape)
         self.tcc2d = (
             self.jsource * np.dot(H, H.transpose()) / self.s.detaf / self.s.detag
         )
