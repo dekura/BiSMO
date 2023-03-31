@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2022-10-17 11:50:53
-LastEditTime: 2023-03-30 14:30:06
+LastEditTime: 2023-03-31 14:11:02
 Contact: cgjcuhk@gmail.com
 Description: some utils for image loading.
 """
@@ -35,11 +35,13 @@ def arr_bound(arr, name):
     rprint(f"\n=============[yellow]{name}[/yellow]================")
     # rprint(arr)
     min_wh = 7
-    if arr.shape[0] > min_wh:
+    if arr.shape[0] >= min_wh and len(list(arr.shape)) > 1:
         lefti = arr.shape[0] // 2 - 4
         rprint(f"\n*************[yellow]{name}[{lefti}:{lefti+min_wh},{lefti}:{lefti+min_wh}][/yellow]*************")
         rprint(arr[lefti:lefti+min_wh,lefti:lefti+min_wh])
         rprint(f"*************[yellow]{name}[{lefti}:{lefti+7},{lefti}:{lefti+7}][/yellow]*************\n")
+    else:
+        rprint(arr)
     rprint(f"[yellow]{name}[/yellow].shape: {arr.shape}")
     rprint(f"[yellow]{name}[/yellow].dtype: {arr.dtype}")
     rprint(f"[yellow]{name}[/yellow] [red]sum[/red]: {np.sum(arr)}")
@@ -60,11 +62,13 @@ def torch_arr_bound(arr, name):
     rprint(f"\n=============[yellow]{name}[/yellow]================")
     # rprint(arr)
     min_wh = 7
-    if arr.shape[0] > min_wh:
+    if arr.shape[0] >= min_wh and len(list(arr.shape)) > 1:
         lefti = arr.shape[0] // 2 - 4
         rprint(f"\n*************[yellow]{name}[{lefti}:{lefti+min_wh},{lefti}:{lefti+min_wh}][/yellow]*************")
         rprint(arr[lefti:lefti+min_wh,lefti:lefti+min_wh])
         rprint(f"*************[yellow]{name}[{lefti}:{lefti+7},{lefti}:{lefti+7}][/yellow]*************\n")
+    else:
+        rprint(arr)
     rprint(f"[yellow]{name}[/yellow].shape: {arr.shape}")
     rprint(f"[yellow]{name}[/yellow].dtype: {arr.dtype}")
     rprint(f"[yellow]{name}[/yellow] [red]sum[/red]: {torch.sum(arr)}")

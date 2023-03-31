@@ -4,9 +4,11 @@ import numpy as np
 import pyfftw
 import scipy as sci
 import shelve
+import time
 
 # from src.models.litho.lens import LensList
 # from src.models.litho.source import Source
+
 from lens import LensList
 from source import Source
 
@@ -40,8 +42,6 @@ class TCC:
 
     def calSpatTCC(self):
         H = np.reshape(self.psf, (self.psf.size, 1))
-        print(H.shape)
-        print(H.transpose().shape)
         self.tcc2d = (
             self.jsource * np.dot(H, H.transpose()) / self.s.detaf / self.s.detag
         )
@@ -64,7 +64,10 @@ class TCC:
         tcc2df = tcc4df.reshape((self.gnum * self.fnum, self.gnum * self.fnum))
 
         # U,S,V = np.linalg.svd(tcc2df)
+        tic = time.time()
         U, S, V = sci.sparse.linalg.svds(tcc2df, self.order)  # faster than svd
+        print(f"### sci.svds taking {(time.time() - tic):.3f} seconds")
+
         self.coefs = S[0 : self.order]
         self.kernels = np.zeros((self.gnum, self.fnum, self.order), dtype=complex)
         for ii in range(self.order):
@@ -151,3 +154,6 @@ if __name__ == "__main__":
 
     tcc = TCCList(s, o)
     tcc.calculate()
+
+    tdb = TCCDB('./db/sci.sparse.svd.tcc')
+    tdb.save_db(tcc)

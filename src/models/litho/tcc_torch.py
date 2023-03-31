@@ -1,10 +1,11 @@
 """
 """
-import numpy as np
-import pyfftw
-import scipy as sci
+# import numpy as np
+# import pyfftw
+# import scipy as sci
 import shelve
 import torch
+import time
 # from src.models.litho.lens import LensList
 # from src.models.litho.source import Source
 
@@ -46,15 +47,15 @@ class TCC:
         self.tcc2d = self.jsource * torch.matmul(H, H.t()) / self.s.detaf / self.s.detag
 
     def svd(self):
-        self.spat_part = pyfftw.empty_aligned(
-            (self.gnum, self.fnum, self.gnum, self.fnum), dtype="complex128"
-        )
+        # self.spat_part = pyfftw.empty_aligned(
+        #     (self.gnum, self.fnum, self.gnum, self.fnum), dtype="complex128"
+        # )
         self.spat_part = torch.zeros(
             (self.gnum, self.fnum, self.gnum, self.fnum), dtype=torch.complex128
         )
-        self.freq_part = pyfftw.empty_aligned(
-            (self.gnum, self.fnum, self.gnum, self.fnum), dtype="complex128"
-        )
+        # self.freq_part = pyfftw.empty_aligned(
+        #     (self.gnum, self.fnum, self.gnum, self.fnum), dtype="complex128"
+        # )
         self.freq_part = torch.zeros(
             (self.gnum, self.fnum, self.gnum, self.fnum), dtype=torch.complex128
         )
@@ -70,8 +71,23 @@ class TCC:
         tcc2df = tcc4df.reshape((self.gnum * self.fnum, self.gnum * self.fnum))
 
         # U,S,V = torch.linalg.svd(tcc2df)
-        U, S, V = torch.linalg.svd(tcc2df)  # faster than svd
-        # U, S, V = torch.svd_lowrank(tcc2df)  # faster than svd
+
+        # tic = time.time()
+        # U, S, V = torch.linalg.svd(tcc2df.to_sparse())  # faster than svd
+        # print(f"### sparse torch.linalg.svd taking {(time.time() - tic):.3f} seconds")
+
+
+        # tic = time.time()
+        # print(tcc2df)
+        # U, S, V = torch.svd_lowrank(tcc2df.to_sparse())  # faster than svd
+        # print(f"### torch.svd_lowrank taking {(time.time() - tic):.3f} seconds")
+
+
+        tic = time.time()
+        U, S, V = torch.svd(tcc2df)  # faster than svd
+        print(f"### torch.svd taking {(time.time() - tic):.3f} seconds")
+
+
         self.coefs = S[0 : self.order]
         self.kernels = torch.zeros((self.gnum, self.fnum, self.order), dtype=torch.complex128)
         for ii in range(self.order):
@@ -162,3 +178,5 @@ if __name__ == "__main__":
 
     # calculate the time for tcc
     # save the tcc matrices.
+    # tdb = TCCDB('./db/torch.svd.tcc')
+    # tdb.save_db(tcc)
