@@ -66,7 +66,7 @@ class TCC:
         # U,S,V = np.linalg.svd(tcc2df)
         tic = time.time()
         U, S, V = sci.sparse.linalg.svds(tcc2df, self.order)  # faster than svd
-        print(f"### sci.svds taking {(time.time() - tic):.3f} seconds")
+        print(f"### sci.sparse.linalg.svds taking {(time.time() - tic):.3f} seconds")
 
         self.coefs = S[0 : self.order]
         self.kernels = np.zeros((self.gnum, self.fnum, self.order), dtype=complex)
