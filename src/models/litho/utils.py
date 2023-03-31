@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2022-10-17 11:50:53
-LastEditTime: 2023-03-31 14:11:02
+LastEditTime: 2023-03-31 17:09:24
 Contact: cgjcuhk@gmail.com
 Description: some utils for image loading.
 """
@@ -72,7 +72,6 @@ def torch_arr_bound(arr, name):
     rprint(f"[yellow]{name}[/yellow].shape: {arr.shape}")
     rprint(f"[yellow]{name}[/yellow].dtype: {arr.dtype}")
     rprint(f"[yellow]{name}[/yellow] [red]sum[/red]: {torch.sum(arr)}")
-    print(arr.dtype)
     if arr.dtype == torch.complex128:
         rprint(f"[yellow]{name}.real[/yellow] sum: {torch.sum(arr.real)}")
         rprint(f"[yellow]{name}.imag[/yellow] sum: {torch.sum(arr.imag)}")

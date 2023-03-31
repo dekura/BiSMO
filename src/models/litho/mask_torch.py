@@ -1,14 +1,13 @@
+import torch
 import matplotlib.pyplot as plt
 import numpy as np
-import pyfftw
 import scipy.signal as sg
 from PIL import Image, ImageDraw
-
+import torch.nn.functional as F
 from pathlib import Path
 # from src.models.litho.gdsii.library import Library
 from gdsii.library import Library
-from utils import arr_bound
-
+from utils import torch_arr_bound
 
 class Mask:
     """
@@ -96,16 +95,13 @@ class Mask:
             polygon = [tuple(y) for y in vetex_list]
             ImageDraw.Draw(img).polygon(polygon, outline=1, fill=1)
 
-        self.data = np.array(img)
-        self.data = np.float64(self.data)
+        self.data = torch.from_numpy(np.array(img))
+        # self.data = np.float64(self.data)
+        self.spat_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex128)
 
-        self.spat_part = pyfftw.empty_aligned(
-            (self.y_gridnum, self.x_gridnum), dtype="complex128"
-        )
-        self.freq_part = pyfftw.empty_aligned(
-            (self.y_gridnum, self.x_gridnum), dtype="complex128"
-        )
-        self.fft_mask = pyfftw.FFTW(self.spat_part, self.freq_part, axes=(0, 1))
+        self.freq_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex128)
+
+
 
     #TODO: how to handle the gds path
     def openGDS(self):
@@ -163,33 +159,35 @@ class Mask:
 
             self.perimeter += np.sum(np.abs(pp[0:-1] - pp[1:polygonlen]))
 
-        self.data = np.array(img)
+        self.data = torch.from_numpy(np.array(img))
 
-        # Fourier transform pair, pyfftw syntax
-        self.spat_part = pyfftw.empty_aligned(
-            (self.y_gridnum, self.x_gridnum), dtype="complex128"
-        )
-        self.freq_part = pyfftw.empty_aligned(
-            (self.y_gridnum, self.x_gridnum), dtype="complex128"
-        )
-        self.fft_mask = pyfftw.FFTW(self.spat_part, self.freq_part, axes=(0, 1))
+        # Fourier transform pair
+        self.spat_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex128)
+        self.freq_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex128)
+
 
     # use the fftw packages
     def maskfft(self):
-        self.spat_part[:] = np.fft.ifftshift(self.data)
-        self.fft_mask()
-        self.fdata = np.fft.fftshift(self.freq_part)
+        self.spat_part[:] = torch.fft.ifftshift(self.data)
+        self.freq_part = torch.fft.fftn(self.spat_part)
+        self.fdata = torch.fft.fftshift(self.freq_part)
+
 
     def maskfftold(self):
-        self.fdata = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(self.data)))
+        self.fdata = torch.fft.fftshift(torch.fft.fft2(torch.fft.ifftshift(self.data)))
 
     def smooth(self):
-        xx = np.linspace(-1, 1, 21)
-        X, Y = np.meshgrid(xx, xx)
+        xx = torch.linspace(-1, 1, 21)
+        X, Y = torch.meshgrid(xx, xx, indexing="xy")
         R = X ** 2 + Y ** 2
-        G = np.exp(-10 * R)
-        D = sg.convolve2d(0.9 * self.data + 0.05, G, "same") / np.sum(G)
-        self.sdata = D
+        # change G to 4-D to use F.conv2d
+        G = torch.exp(-10 * R)
+        G = G.view(1, 1, *G.shape)
+        print(G.shape)
+        print(self.data.shape)
+        D = F.conv2d(0.9 * self.data.unsqueeze(0) + 0.05, G, padding="same") / torch.sum(G)
+        self.sdata = D.squeeze().to(torch.float64)
+        print(self.sdata.shape)
 
 
 if __name__ == "__main__":
@@ -218,9 +216,9 @@ if __name__ == "__main__":
     m.openGDS()
     m.maskfft()
     m.smooth()
-    arr_bound(m.data, "numpy m.data")
-    arr_bound(m.sdata, "numpy m.sdata")
-    arr_bound(m.fdata, "numpy m.fdata")
+    torch_arr_bound(m.data, "m.data")
+    torch_arr_bound(m.sdata, "m.sdata")
+    torch_arr_bound(m.fdata, "m.fdata")
     # plt.imshow(
     #     m.data,
     #     extent=(m.x_range[0], m.x_range[1], m.y_range[0], m.y_range[1]),

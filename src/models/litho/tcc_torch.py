@@ -1,8 +1,32 @@
 """
+Author: Guojin Chen @ CUHK-CSE
+Homepage: https://gjchen.me
+Date: 2023-03-31 10:08:59
+LastEditTime: 2023-03-31 15:18:27
+Contact: cgjcuhk@gmail.com
+Description:
+
+NOTE:
+
+torch.svd can not support complex numbers
+torch.linalg.svd is slow  (25s for 2000 x 2000)
+sci.linalg.svd is slow    (25s for 2000 x 2000)
+
+so I use sci.sparse.linalg.svds for fast calculating. (1.5s for 2000 x 2000)
+
+
+For results:
+
+the sci.linalg.svd == torch.linalg.svd
+the sci.sparse.linalg.svds != sci.linalg.svd
+
+
+TODO:
+If change the device to GPU, we need to compare the runtime performance again.
 """
 # import numpy as np
 # import pyfftw
-# import scipy as sci
+import scipy as sci
 import shelve
 import torch
 import time
@@ -42,8 +66,6 @@ class TCC:
 
     def calSpatTCC(self):
         H = torch.reshape(self.psf, (torch.prod(torch.tensor(self.psf.shape)), 1))
-        print(H.shape)
-        print(H.t().shape)
         self.tcc2d = self.jsource * torch.matmul(H, H.t()) / self.s.detaf / self.s.detag
 
     def svd(self):
@@ -70,22 +92,21 @@ class TCC:
         # tcc4df = torch.fft.fftshift(torch.fft.fftn(torch.fft.ifftshift(tcc4d)))
         tcc2df = tcc4df.reshape((self.gnum * self.fnum, self.gnum * self.fnum))
 
-        # U,S,V = torch.linalg.svd(tcc2df)
-
-        # tic = time.time()
-        # U, S, V = torch.linalg.svd(tcc2df.to_sparse())  # faster than svd
-        # print(f"### sparse torch.linalg.svd taking {(time.time() - tic):.3f} seconds")
-
-
-        # tic = time.time()
-        # print(tcc2df)
+        # torch.svd_lowrank can not be applied on complex matrices
         # U, S, V = torch.svd_lowrank(tcc2df.to_sparse())  # faster than svd
-        # print(f"### torch.svd_lowrank taking {(time.time() - tic):.3f} seconds")
 
+        # tic = time.time()
+        # U, S, V = torch.linalg.svd(tcc2df)  # faster than svd
+        # U, S, V = sci.linalg.svd(tcc2df.numpy())
+        # print(f"### torch.linalg.svd taking {(time.time() - tic):.3f} seconds")
 
+        # torch.svd, torch.linalg.svd and sci.linalg.svd are too slow
+        # For research, I use sci.sparse.linalg.svds
         tic = time.time()
-        U, S, V = torch.svd(tcc2df)  # faster than svd
-        print(f"### torch.svd taking {(time.time() - tic):.3f} seconds")
+        U, S, V = sci.sparse.linalg.svds(tcc2df.numpy(), self.order)  # faster than torch svd
+        U = torch.from_numpy(U.copy())
+        S = torch.from_numpy(S.copy())
+        print(f"### sci.sparse.linalg.svds taking {(time.time() - tic):.3f} seconds")
 
 
         self.coefs = S[0 : self.order]
@@ -178,5 +199,5 @@ if __name__ == "__main__":
 
     # calculate the time for tcc
     # save the tcc matrices.
-    # tdb = TCCDB('./db/torch.svd.tcc')
-    # tdb.save_db(tcc)
+    tdb = TCCDB('./db/torch_sci.sparse.svds.tcc')
+    tdb.save_db(tcc)
