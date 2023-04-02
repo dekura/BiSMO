@@ -183,11 +183,11 @@ class Mask:
         # change G to 4-D to use F.conv2d
         G = torch.exp(-10 * R)
         G = G.view(1, 1, *G.shape)
-        print(G.shape)
-        print(self.data.shape)
+        # print(G.shape)
+        # print(self.data.shape)
         D = F.conv2d(0.9 * self.data.unsqueeze(0) + 0.05, G, padding="same") / torch.sum(G)
         self.sdata = D.squeeze().to(torch.float64)
-        print(self.sdata.shape)
+        # print(self.sdata.shape)
 
 
 if __name__ == "__main__":
