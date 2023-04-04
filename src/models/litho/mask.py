@@ -1,12 +1,12 @@
+import torch
 import matplotlib.pyplot as plt
 import numpy as np
-import pyfftw
-import scipy.signal as sg
+# import scipy.signal as sg
 from PIL import Image, ImageDraw
-
-from src.models.litho.config import PATH
-from src.models.litho.gdsii.library import Library
-
+import torch.nn.functional as F
+from pathlib import Path
+from gdsii.library import Library
+from utils import torch_arr_bound
 
 class Mask:
     """
@@ -56,8 +56,8 @@ class Mask:
             self,
             gds_path: str,
             layername: int,
-            boundary: 0.16,
-            pixels_per_um: 10,
+            boundary: float = 0.16,
+            pixels_per_um: int = 10,
             xmax=500,
             ymax=500,
             x_gridsize=1,
@@ -94,16 +94,13 @@ class Mask:
             polygon = [tuple(y) for y in vetex_list]
             ImageDraw.Draw(img).polygon(polygon, outline=1, fill=1)
 
-        self.data = np.array(img)
-        self.data = np.float64(self.data)
+        self.data = torch.from_numpy(np.array(img))
 
-        self.spat_part = pyfftw.empty_aligned(
-            (self.y_gridnum, self.x_gridnum), dtype="complex128"
-        )
-        self.freq_part = pyfftw.empty_aligned(
-            (self.y_gridnum, self.x_gridnum), dtype="complex128"
-        )
-        self.fft_mask = pyfftw.FFTW(self.spat_part, self.freq_part, axes=(0, 1))
+        self.spat_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex128)
+
+        self.freq_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex128)
+
+
 
     #TODO: how to handle the gds path
     def openGDS(self):
@@ -122,7 +119,6 @@ class Mask:
         ymax = []
         for ii in range(0, len(a)):
             if a[ii].layer == layername:
-                # if hasattr(a[ii],'data_type'):
                 if len(a[ii].xy) > 1:
                     aa = np.array(a[ii].xy) / 1000 * pixels_per_um
                     b.append(aa)
@@ -161,33 +157,32 @@ class Mask:
 
             self.perimeter += np.sum(np.abs(pp[0:-1] - pp[1:polygonlen]))
 
-        self.data = np.array(img)
+        self.data = torch.from_numpy(np.array(img))
 
-        # Fourier transform pair, pyfftw syntax
-        self.spat_part = pyfftw.empty_aligned(
-            (self.y_gridnum, self.x_gridnum), dtype="complex128"
-        )
-        self.freq_part = pyfftw.empty_aligned(
-            (self.y_gridnum, self.x_gridnum), dtype="complex128"
-        )
-        self.fft_mask = pyfftw.FFTW(self.spat_part, self.freq_part, axes=(0, 1))
+        # Fourier transform pair
+        self.spat_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex128)
+        self.freq_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex128)
+
 
     # use the fftw packages
     def maskfft(self):
-        self.spat_part[:] = np.fft.ifftshift(self.data)
-        self.fft_mask()
-        self.fdata = np.fft.fftshift(self.freq_part)
+        self.spat_part[:] = torch.fft.ifftshift(self.data)
+        self.freq_part = torch.fft.fftn(self.spat_part)
+        self.fdata = torch.fft.fftshift(self.freq_part)
+
 
     def maskfftold(self):
-        self.fdata = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(self.data)))
+        self.fdata = torch.fft.fftshift(torch.fft.fft2(torch.fft.ifftshift(self.data)))
 
     def smooth(self):
-        xx = np.linspace(-1, 1, 21)
-        X, Y = np.meshgrid(xx, xx)
+        xx = torch.linspace(-1, 1, 21)
+        X, Y = torch.meshgrid(xx, xx, indexing="xy")
         R = X ** 2 + Y ** 2
-        G = np.exp(-10 * R)
-        D = sg.convolve2d(0.9 * self.data + 0.05, G, "same") / np.sum(G)
-        self.sdata = D
+        # change G to 4-D to use F.conv2d
+        G = torch.exp(-10 * R)
+        G = G.view(1, 1, *G.shape)
+        D = F.conv2d(0.9 * self.data.unsqueeze(0) + 0.05, G, padding="same") / torch.sum(G)
+        self.sdata = D.squeeze().to(torch.float64)
 
 
 if __name__ == "__main__":
@@ -204,26 +199,32 @@ if __name__ == "__main__":
     # m.poly2mask()
 
     """from GDS"""
-    m = Mask()
+    gds_dir = '/home/gjchen21/phd/projects/smo/SMO-ICCAD23/data/NanGateLibGDS'
+    gds_dir = Path(gds_dir)
+
+    m = Mask(gds_dir / "AND2_X4.gds", 10)
     m.x_range = [-300.0, 300.0]
     m.y_range = [-300.0, 300.0]
     m.x_gridsize = 10
     m.y_gridsize = 10
-    m.openGDS(PATH.gdsdir / "AND2_X4.gds", 10)
+
+    m.openGDS()
     m.maskfft()
     m.smooth()
-
-    plt.imshow(
-        m.data,
-        extent=(m.x_range[0], m.x_range[1], m.y_range[0], m.y_range[1]),
-        cmap="hot",
-        interpolation="none",
-    )
-    plt.figure()
-    plt.imshow(
-        m.sdata,
-        extent=(m.x_range[0], m.x_range[1], m.y_range[0], m.y_range[1]),
-        cmap="hot",
-        interpolation="none",
-    )
-    plt.show()
+    torch_arr_bound(m.data, "m.data")
+    torch_arr_bound(m.sdata, "m.sdata")
+    torch_arr_bound(m.fdata, "m.fdata")
+    # plt.imshow(
+    #     m.data,
+    #     extent=(m.x_range[0], m.x_range[1], m.y_range[0], m.y_range[1]),
+    #     cmap="hot",
+    #     interpolation="none",
+    # )
+    # plt.figure()
+    # plt.imshow(
+    #     m.sdata,
+    #     extent=(m.x_range[0], m.x_range[1], m.y_range[0], m.y_range[1]),
+    #     cmap="hot",
+    #     interpolation="none",
+    # )
+    # plt.show()

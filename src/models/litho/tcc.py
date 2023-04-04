@@ -1,12 +1,34 @@
 """
+Author: Guojin Chen @ CUHK-CSE
+Homepage: https://gjchen.me
+Date: 2023-03-31 10:08:59
+LastEditTime: 2023-04-04 11:43:23
+Contact: cgjcuhk@gmail.com
+Description:
+
+NOTE:
+
+torch.svd can not support complex numbers
+torch.linalg.svd is slow  (25s for 2000 x 2000)
+sci.linalg.svd is slow    (25s for 2000 x 2000)
+
+so I use sci.sparse.linalg.svds for fast calculating. (1.5s for 2000 x 2000)
+
+For results:
+
+the sci.linalg.svd == torch.linalg.svd
+the sci.sparse.linalg.svds != sci.linalg.svd
+
+
+TODO:
+If change the device to GPU, we need to compare the runtime performance again.
 """
-import numpy as np
-import pyfftw
 import scipy as sci
 import shelve
-
-from src.models.litho.lens import LensList
-from src.models.litho.source import Source
+import torch
+import time
+from lens import LensList
+from source import Source
 
 
 class TCC:
@@ -27,44 +49,47 @@ class TCC:
 
     def calMutualIntensity(self):
         self.gnum, self.fnum = self.s.data.shape
-        J = np.zeros((self.gnum, self.fnum, self.gnum, self.fnum), dtype=complex)
+        J = torch.zeros((self.gnum, self.fnum, self.gnum, self.fnum), dtype=torch.complex128)
         for ii in range(self.gnum):
             for jj in range(self.fnum):
                 J[:, :, ii, jj] = self.s.spatMutualData.real[
                     (self.gnum - ii - 1) : (2 * self.gnum - ii - 1),
                     (self.fnum - jj - 1) : (2 * self.fnum - jj - 1),
                 ]
-        self.jsource = np.reshape(J, (self.gnum * self.fnum, self.gnum * self.fnum))
+        self.jsource = torch.reshape(J, (self.gnum * self.fnum, self.gnum * self.fnum))
 
     def calSpatTCC(self):
-        H = np.reshape(self.psf, (self.psf.size, 1))
-        self.tcc2d = (
-            self.jsource * np.dot(H, H.transpose()) / self.s.detaf / self.s.detag
-        )
+        H = torch.reshape(self.psf, (torch.prod(torch.tensor(self.psf.shape)), 1))
+        self.tcc2d = self.jsource * torch.matmul(H, H.t()) / self.s.detaf / self.s.detag
 
     def svd(self):
-        self.spat_part = pyfftw.empty_aligned(
-            (self.gnum, self.fnum, self.gnum, self.fnum), dtype="complex128"
+
+        self.spat_part = torch.zeros(
+            (self.gnum, self.fnum, self.gnum, self.fnum), dtype=torch.complex128
         )
-        self.freq_part = pyfftw.empty_aligned(
-            (self.gnum, self.fnum, self.gnum, self.fnum), dtype="complex128"
+
+        self.freq_part = torch.zeros(
+            (self.gnum, self.fnum, self.gnum, self.fnum), dtype=torch.complex128
         )
-        self.fft_svd = pyfftw.FFTW(self.spat_part, self.freq_part, axes=(0, 1, 2, 3))
 
         tcc4d = self.tcc2d.reshape((self.gnum, self.fnum, self.gnum, self.fnum))
-        self.spat_part[:] = np.fft.ifftshift(tcc4d)
-        self.fft_svd()
-        tcc4df = np.fft.fftshift(self.freq_part)
-        # tcc4df = np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(tcc4d)))
+        self.spat_part[:] = torch.fft.ifftshift(tcc4d)
 
+        self.freq_part = torch.fft.fftn(self.spat_part)
+        tcc4df = torch.fft.fftshift(self.freq_part)
         tcc2df = tcc4df.reshape((self.gnum * self.fnum, self.gnum * self.fnum))
 
-        # U,S,V = np.linalg.svd(tcc2df)
-        U, S, V = sci.sparse.linalg.svds(tcc2df, self.order)  # faster than svd
+        tic = time.time()
+        U, S, V = sci.sparse.linalg.svds(tcc2df.numpy(), self.order)  # faster than torch svd
+        U = torch.from_numpy(U.copy())
+        S = torch.from_numpy(S.copy())
+        print(f"### sci.sparse.linalg.svds taking {(time.time() - tic):.3f} seconds")
+
+
         self.coefs = S[0 : self.order]
-        self.kernels = np.zeros((self.gnum, self.fnum, self.order), dtype=complex)
+        self.kernels = torch.zeros((self.gnum, self.fnum, self.order), dtype=torch.complex128)
         for ii in range(self.order):
-            self.kernels[:, :, ii] = np.reshape(U[:, ii], (self.gnum, self.fnum))
+            self.kernels[:, :, ii] = torch.reshape(U[:, ii], (self.gnum, self.fnum))
 
 
 class TCCList(TCC):
@@ -147,3 +172,9 @@ if __name__ == "__main__":
 
     tcc = TCCList(s, o)
     tcc.calculate()
+
+
+    # calculate the time for tcc
+    # save the tcc matrices.
+    tdb = TCCDB('./db/torch_sci.sparse.svds.tcc')
+    tdb.save_db(tcc)

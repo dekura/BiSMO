@@ -1,9 +1,15 @@
 """
+Author: Guojin Chen @ CUHK-CSE
+Homepage: https://gjchen.me
+Date: 2023-03-30 13:28:00
+LastEditTime: 2023-04-04 11:41:34
+Contact: cgjcuhk@gmail.com
+Description: implement for zernike functions
 """
 
 from math import factorial
-
-from numpy import arctan2, array, cos, linspace, meshgrid, sin, sqrt, where, zeros
+import torch
+from torch import arctan2, tensor, cos, linspace, meshgrid, sin, sqrt, where, zeros
 
 
 def polar_array(T, num):
@@ -29,8 +35,8 @@ def rnm(n, m, rho):
             * factorial(n - s)
             / (
                 factorial(s)
-                * factorial(-s + (n + abs(m)) / 2)
-                * factorial(-s + (n - abs(m)) / 2)
+                * factorial((-s + (n + abs(m)) / 2).to(torch.int))
+                * factorial((-s + (n - abs(m)) / 2).to(torch.int))
             )
         )
         p = CR * pow(rho, n - 2 * s)
@@ -72,8 +78,8 @@ def i2nm(i):
     m-order    0 -1  1 -2  0  2 -3 -1  1  3 -4 -2  0  2  4 ...
     ========= == == == == == == == == == == == == == == == ===
     """
-    ia = array(i)
-    n = (1 + (sqrt(8 * (ia) + 1) - 3) / 2).astype(int)
+    ia = tensor(i)
+    n = (1 + (sqrt(8 * (ia) + 1) - 3) / 2).to(torch.int)
     ni = n * (n + 1) / 2
     m = -n + 2 * (i - ni)
     return n, m
@@ -85,3 +91,9 @@ def zerniken(i, rho, theta):
     """
     n, m = i2nm(i)
     return zernike(n, m, rho, theta)
+
+
+if __name__ == "__main__":
+    n, m = i2nm(3)
+    print(n, m)
+    print(type(n))

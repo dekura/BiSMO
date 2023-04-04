@@ -1,19 +1,26 @@
 """
+Author: Guojin Chen @ CUHK-CSE
+Homepage: https://gjchen.me
+Date: 2023-03-29 15:45:14
+LastEditTime: 2023-04-02 14:41:33
+Contact: cgjcuhk@gmail.com
 
+
+Description:
+
+The real value for source.spatMutualData is used.
 """
 
 import math
-
-import numpy as np
-from scipy.special import erf
-
+import torch
+from torch.special import erf
 
 def Edeta(deta, x):
     if deta != 0:
         g = 0.5 * (1 + erf(x / deta))
         return g
     else:
-        g = np.zeros(x.shape)
+        g = torch.zeros(x.shape, dtype=torch.float64)
         g[x >= 0] = 1
         return g
 
@@ -53,22 +60,22 @@ class Source:
     def update(self):
         self.detaf = self.wavelength / (self.maskxpitch * self.na)
         self.detag = self.wavelength / (self.maskypitch * self.na)
-        self.fnum = int(np.ceil(2 / self.detaf))
-        self.gnum = int(np.ceil(2 / self.detag))
+        self.fnum = int(torch.ceil(torch.tensor(2 / self.detaf, dtype=torch.float64)))
+        self.gnum = int(torch.ceil(torch.tensor(2 / self.detag, dtype=torch.float64)))
 
-        fx = np.linspace(
+        fx = torch.linspace(
             -self.fnum * self.detaf, self.fnum * self.detaf, 2 * self.fnum + 1
         )
-        fy = np.linspace(
+        fy = torch.linspace(
             -self.gnum * self.detag, self.gnum * self.detag, 2 * self.gnum + 1
         )
-        FX, FY = np.meshgrid(fx, fy, indexing="xy")
+        FX, FY = torch.meshgrid(fx, fy, indexing="xy")
 
-        r = np.sqrt(FX ** 2 + FY ** 2)
-        theta = np.arctan2(FY, FX)
+        r = torch.sqrt(FX ** 2 + FY ** 2)
+        theta = torch.arctan2(FY, FX)
         theta[r > 1] = 0
         r[r > 1] = 0
-        s0 = np.sqrt(FX ** 2 + FY ** 2)
+        s0 = torch.sqrt(FX ** 2 + FY ** 2)
         s0[s0 <= 1] = 1
         s0[s0 > 1] = 0
 
@@ -96,26 +103,26 @@ class Source:
                     Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(1.0 * math.pi -
-                                 np.abs(self.shiftAngle - self.theta)),
+                        - torch.abs(1.0 * math.pi -
+                                 torch.abs(self.shiftAngle - self.theta)),
                     )
                     + Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(0.5 * math.pi -
-                                 np.abs(self.shiftAngle - self.theta)),
+                        - torch.abs(0.5 * math.pi -
+                                 torch.abs(self.shiftAngle - self.theta)),
                     )
                     + Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(-0.5 * math.pi -
-                                 np.abs(self.shiftAngle - self.theta)),
+                        - torch.abs(-0.5 * math.pi -
+                                 torch.abs(self.shiftAngle - self.theta)),
                     )
                     + Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(-0.0 * math.pi -
-                                 np.abs(self.shiftAngle - self.theta)),
+                        - torch.abs(-0.0 * math.pi -
+                                 torch.abs(self.shiftAngle - self.theta)),
                     )
                 )
                 * self.s0
@@ -128,12 +135,12 @@ class Source:
                 * (
                     Edeta(
                         self.smooth_deta,
-                        self.openAngle - np.abs(self.shiftAngle - self.theta),
+                        self.openAngle - torch.abs(self.shiftAngle - self.theta),
                     )
                     + Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(math.pi - np.abs(self.shiftAngle - self.theta)),
+                        - torch.abs(math.pi - torch.abs(self.shiftAngle - self.theta)),
                     )
                 )
                 * self.s0
@@ -148,20 +155,20 @@ class Source:
             self.data = s
 
     def ifft(self):
-        fx = np.linspace(
+        fx = torch.linspace(
             -self.fnum * self.detaf, self.fnum * self.detaf, 4 * self.fnum + 1
         )
-        fy = np.linspace(
+        fy = torch.linspace(
             -self.gnum * self.detag, self.gnum * self.detag, 4 * self.gnum + 1
         )
-        FX, FY = np.meshgrid(fx, fy, indexing="xy")
+        FX, FY = torch.meshgrid(fx, fy, indexing="xy")
 
-        r = np.sqrt(FX ** 2 + FY ** 2)
-        theta = np.arctan2(FY, FX)
+        r = torch.sqrt(FX ** 2 + FY ** 2)
+        theta = torch.arctan2(FY, FX)
         theta[r > 1] = 0
         r[r > 1] = 0
-        s0 = np.sqrt(FX ** 2 + FY ** 2)
-        s0 = np.where(s0 > 1.0, 0.0, 1.0)
+        s0 = torch.sqrt(FX ** 2 + FY ** 2)
+        s0 = torch.where(s0 > 1.0, 0.0, 1.0)
 
         self.r = r
         self.s0 = s0
@@ -187,26 +194,26 @@ class Source:
                     Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(1.0 * math.pi -
-                                 np.abs(self.shiftAngle - self.theta)),
+                        - torch.abs(1.0 * math.pi -
+                                torch.abs(self.shiftAngle - self.theta)),
                     )
                     + Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(0.5 * math.pi -
-                                 np.abs(self.shiftAngle - self.theta)),
+                        - torch.abs(0.5 * math.pi -
+                                torch.abs(self.shiftAngle - self.theta)),
                     )
                     + Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(-0.5 * math.pi -
-                                 np.abs(self.shiftAngle - self.theta)),
+                        - torch.abs(-0.5 * math.pi -
+                                torch.abs(self.shiftAngle - self.theta)),
                     )
                     + Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(-0.0 * math.pi -
-                                 np.abs(self.shiftAngle - self.theta)),
+                        - torch.abs(-0.0 * math.pi -
+                                torch.abs(self.shiftAngle - self.theta)),
                     )
                 )
                 * self.s0
@@ -219,12 +226,12 @@ class Source:
                 * (
                     Edeta(
                         self.smooth_deta,
-                        self.openAngle - np.abs(self.shiftAngle - self.theta),
+                        self.openAngle - torch.abs(self.shiftAngle - self.theta),
                     )
                     + Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(math.pi - np.abs(self.shiftAngle - self.theta)),
+                        - torch.abs(math.pi - torch.abs(self.shiftAngle - self.theta)),
                     )
                 )
                 * self.s0
@@ -239,8 +246,8 @@ class Source:
             self.mdata = s
         normlize = 1  # self.detaf * self.detag
         self.spatMutualData = (
-            np.fft.fftshift(np.fft.ifft2(
-                np.fft.ifftshift(self.mdata))) * normlize
+            torch.fft.fftshift(torch.fft.ifft2(
+                torch.fft.ifftshift(self.mdata))) * normlize
         )
 
 
@@ -252,3 +259,4 @@ if __name__ == "__main__":
     s.smooth_deta = 0
     s.update()
     s.ifft()
+
