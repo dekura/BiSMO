@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2022-10-17 11:50:53
-LastEditTime: 2023-04-04 11:47:48
+LastEditTime: 2023-04-06 11:26:06
 Contact: cgjcuhk@gmail.com
 Description: some utils for image loading.
 """
@@ -22,6 +22,18 @@ def save_img_from_01np(np_arr, file_path):
     if not Path(file_path).parent.exists():
         Path(file_path).parent.mkdir(parents=True)
     img.save(f"{file_path}")
+
+
+
+def save_img_from_01torch(torch_arr, file_path):
+    img = (torch_arr.cpu().numpy() * 255).astype(np.uint8)
+    img = Image.fromarray(img)
+    if img.mode == "F":
+        img = img.convert("L")
+    if not Path(file_path).parent.exists():
+        Path(file_path).parent.mkdir(parents=True)
+    img.save(f"{file_path}")
+
 
 
 def show_img(arr, name):

@@ -3,5 +3,5 @@ na: 1.35
 nLiquid: 1.414
 wavelength: 193.0
 defocus: 0.0
-maskxpitch: 2000
-maskypitch: 2000
+maskxpitch: 2048
+maskypitch: 2048

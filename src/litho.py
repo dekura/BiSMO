@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-03-23 14:56:21
-LastEditTime: 2023-03-29 11:20:56
+LastEditTime: 2023-04-06 15:39:51
 Contact: cgjcuhk@gmail.com
 Description: Litho Main Function
 """
@@ -70,11 +70,15 @@ def litho(cfg: DictConfig) -> Tuple[dict, dict]:
 
     log.info(f"Instantiating TCCList <{cfg.tcc._target_}>")
     t: TCCList = hydra.utils.instantiate(cfg.tcc, source=s, lensList=o)
+    t.order = 30
     t.calculate()
+    print(t.coefList)
 
     log.info(f"Instantiating Mask <{cfg.mask._target_}>")
     m: Mask = hydra.utils.instantiate(cfg.mask)
     m.openGDS()
+    print(m.x_range)
+    print(m.y_range)
     m.maskfft()
 
     log.info(f"Instantiating Aerial and Resist <{cfg.aerial._target_}>")
@@ -90,8 +94,8 @@ def litho(cfg: DictConfig) -> Tuple[dict, dict]:
     log.info("Starting Litho!")
     # trainer.test(model=model, datamodule=datamodule, ckpt_path=cfg.ckpt_path)
     a.litho()
-    a.show_AI(show=False, save=True)
-    a.show_RI(show=False, save=True)
+    a.show_AI(show=True, save=True)
+    a.show_RI(show=True, save=True)
 
     # for predictions use trainer.predict(...)
     # predictions = trainer.predict(model=model, dataloaders=dataloaders, ckpt_path=cfg.ckpt_path)

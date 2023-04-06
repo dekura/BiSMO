@@ -5,7 +5,7 @@ LensList is a Lens container, used for, e.g., robust mask synthesis
 
 import copy
 import torch
-from zernike import zerniken
+from src.models.litho.zernike import zerniken
 
 
 

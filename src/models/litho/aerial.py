@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2022-10-01 15:53:02
-LastEditTime: 2023-03-23 16:21:28
+LastEditTime: 2023-04-06 11:26:41
 Contact: gjchen21@cse.cuhk.edu.hk
 Description:  use litho model to get the aerial image.
 """
@@ -16,7 +16,7 @@ from src.models.litho.lens import LensList
 from src.models.litho.mask import Mask
 from src.models.litho.source import Source
 from src.models.litho.tcc import TCCList, TCCDB
-from src.models.litho.utils import arr_bound, save_img_from_01np, show_img
+from src.models.litho.utils import save_img_from_01torch, show_img, torch_arr_bound
 
 class Aerial:
     def __init__(self, m, t):
@@ -53,9 +53,9 @@ class AerialList(Aerial):
             AI = self.image.AIList[ii]
             if show:
                 show_img(AI, f"AIList[{ii}]")
-                arr_bound(AI, f"AIList[{ii}]")
+                torch_arr_bound(AI, f"AIList[{ii}]")
             if save:
-                save_img_from_01np(AI, f"images/AI/AIList_{ii}.png")
+                save_img_from_01torch(AI, f"images/AI/AIList_{ii}.png")
 
     def show_RI(self, show=True, save=False):
         length = len(self.image.focusList)
@@ -65,9 +65,9 @@ class AerialList(Aerial):
                 RI = self.image.RIList[ii][jj]
                 if show:
                     show_img(RI, f"RIList[{ii}][{jj}]")
-                    arr_bound(RI, f"RIList[{ii}][{jj}]")
+                    torch_arr_bound(RI, f"RIList[{ii}][{jj}]")
                 if save:
-                    save_img_from_01np(RI, f"images/RI/RIList_{ii}{jj}.png")
+                    save_img_from_01torch(RI, f"images/RI/RIList_{ii}{jj}.png")
 
 
 if __name__ == "__main__":
@@ -87,7 +87,7 @@ if __name__ == "__main__":
     # arr_bound(m.freq_part, "mask.freq_part")
     # arr_bound(m.fdata, "mask.fdata")
 
-    # save_img_from_01np(m.data, f'images/mask/{m_path}.png')
+    # save_img_from_01torch(m.data, f'images/mask/{m_path}.png')
 
     # save m data first.
     # show_img(m.data, "mask image data")

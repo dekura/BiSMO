@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-03-31 10:08:59
-LastEditTime: 2023-04-04 11:43:23
+LastEditTime: 2023-04-06 11:18:48
 Contact: cgjcuhk@gmail.com
 Description:
 
@@ -27,8 +27,8 @@ import scipy as sci
 import shelve
 import torch
 import time
-from lens import LensList
-from source import Source
+from src.models.litho.lens import LensList
+from src.models.litho.source import Source
 
 
 class TCC:

@@ -26,7 +26,7 @@ class ImageHopkins:
 
         self.freq_part = torch.zeros((self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex128)
 
-    def calAI(self):  # much faster than calAIold()
+    def calAIold(self):  # much faster than calAIold()
         AI_freq_dense = torch.zeros(
             (self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex128
         )
@@ -58,7 +58,7 @@ class ImageHopkins:
         self.spat_part = torch.fft.ifft2(self.freq_part)
         self.AI = torch.real(torch.fft.fftshift(self.spat_part)) / self.norm
 
-    def calAIold(self):
+    def calAI(self):
         AI = torch.zeros((self.mask.y_gridnum, self.mask.x_gridnum))
         for ii in range(self.order):
             e_field = torch.zeros(
@@ -70,10 +70,15 @@ class ImageHopkins:
             )
             AA = torch.fft.fftshift(torch.fft.ifft2(torch.fft.ifftshift(e_field)))
             AI += self.coefs[ii] * torch.abs(AA * torch.conj(AA))
-        self.AI = AI
+        self.AI = AI / self.order
+
+    # def calRI(self):
+        # self.RI = 1 / (1 + torch.exp(-self.resist_a * (self.AI - self.resist_t)))
 
     def calRI(self):
-        self.RI = 1 / (1 + torch.exp(-self.resist_a * (self.AI - self.resist_t)))
+        self.RI = (self.AI >= self.resist_t).to(torch.float64)
+
+
 
 
 class ImageHopkinsList(ImageHopkins):
@@ -113,6 +118,7 @@ class ImageHopkinsList(ImageHopkins):
             self.RIList.append([])
             for jj in self.doseList:
                 self.resist_t = self.resist_tRef * jj
+                print("resist: ", self.resist_t)
                 self.calRI()
                 self.RIList[ii].append(self.RI)
 
