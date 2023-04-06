@@ -1,18 +1,15 @@
-import matplotlib.pyplot as plt
 import numpy as np
-import pyfftw
-import scipy.signal as sg
+import torch
+import torch.nn.functional as F
 from PIL import Image, ImageDraw
 
 from src.models.litho.gdsii.library import Library
-import torch
 
 IMAGE_WH = 2048
 
-class Mask:
-    """
 
-    Binary Mask
+class Mask:
+    """Binary Mask.
 
     Args:
         x/ymax: for the computing area
@@ -50,20 +47,19 @@ class Mask:
             interpolation="none",
         )
         plt.show()
-
     """
 
     def __init__(
-            self,
-            gds_path: str,
-            layername: int = 11,
-            pixels_per_um: int = 100,
-            xmax=1024,
-            ymax=1024,
-            x_gridsize=1,
-            y_gridsize=1,
-            CD=45,
-            ):
+        self,
+        gds_path: str,
+        layername: int = 11,
+        pixels_per_um: int = 100,
+        xmax=1024,
+        ymax=1024,
+        x_gridsize=1,
+        y_gridsize=1,
+        CD=45,
+    ):
         self.x_range = [-xmax, xmax]  # nm
         self.y_range = [-ymax, ymax]
         self.x_gridsize = x_gridsize  # nm
@@ -74,11 +70,15 @@ class Mask:
         self.layername = layername
         self.pixels_per_um = pixels_per_um
 
-    def poly2mask(self):
-        """Get Pixel-based Mask Image from Polygon Data
-        The Poylgon Data Form are sensitive
-        Similar to poly2mask in Matlab
         """
+        Process calculation
+        """
+        self.openGDS()
+        self.maskfft()
+
+    def poly2mask(self):
+        """Get Pixel-based Mask Image from Polygon Data The Poylgon Data Form are sensitive Similar
+        to poly2mask in Matlab."""
         self.x_gridnum = int((self.x_range[1] - self.x_range[0]) / self.x_gridsize)
         self.y_gridnum = int((self.y_range[1] - self.y_range[0]) / self.y_gridsize)
         img = Image.new("L", (self.x_gridnum, self.y_gridnum), 0)
@@ -100,10 +100,7 @@ class Mask:
 
         self.freq_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex128)
 
-
-    def openGDS(
-        self
-    ):
+    def openGDS(self):
         gdsdir = self.gds_path
         layername = self.layername
         pixels_per_um = self.pixels_per_um
@@ -206,12 +203,10 @@ class Mask:
     def maskfftold(self):
         self.fdata = torch.fft.fftshift(torch.fft.fft2(torch.fft.ifftshift(self.data)))
 
-
-
     def smooth(self):
         xx = torch.linspace(-1, 1, 21)
         X, Y = torch.meshgrid(xx, xx, indexing="xy")
-        R = X ** 2 + Y ** 2
+        R = X**2 + Y**2
         # change G to 4-D to use F.conv2d
         G = torch.exp(-10 * R)
         G = G.view(1, 1, *G.shape)

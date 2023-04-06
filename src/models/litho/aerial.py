@@ -2,21 +2,19 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2022-10-01 15:53:02
-LastEditTime: 2023-04-06 11:26:41
+LastEditTime: 2023-04-06 19:30:22
 Contact: gjchen21@cse.cuhk.edu.hk
 Description:  use litho model to get the aerial image.
 """
-from pathlib import Path
 
-import torch
+from typing import Any
 
 from src.models.litho.config import PATH
 from src.models.litho.image import ImageHopkins, ImageHopkinsList
-from src.models.litho.lens import LensList
 from src.models.litho.mask import Mask
-from src.models.litho.source import Source
-from src.models.litho.tcc import TCCList, TCCDB
+from src.models.litho.tcc import TCCDB, TCCList
 from src.models.litho.utils import save_img_from_01torch, show_img, torch_arr_bound
+
 
 class Aerial:
     def __init__(self, m, t):
@@ -33,12 +31,26 @@ class Aerial:
 
 class AerialList(Aerial):
     def __init__(
-            self,
-            mask: Mask,
-            tccList: TCCList):
+        self,
+        mask: Mask,
+        tccList: TCCList,
+        vis: Any,
+        resist_a: float = 80,
+        resist_t: float = 0.6,
+        resist_tRef: float = 0.12,
+        doseList: list = [1.0],
+        doseCoef: list = [1.0],
+    ):
         self.image = ImageHopkinsList(mask, tccList)
+        self.image.resist_a = resist_a
+        self.image.resist_t = resist_t
+        self.image.resist_tRef = resist_tRef
+        self.image.doseList = doseList
+        self.image.doseCoef = doseCoef
         self.xsize = self.image.mask.x_gridnum
         self.ysize = self.image.mask.y_gridnum
+
+        self.vis = vis
 
     def litho(self):
         # I delete maskfft() here, and it did not influence.
@@ -46,32 +58,33 @@ class AerialList(Aerial):
         self.image.AIList = []
         self.image.RIList = []
         self.image.calculate()
+        self.show_AI()
+        self.show_RI()
 
-    def show_AI(self, show=True, save=False):
+    def show_AI(self):
         length = len(self.image.focusList)
         for ii in range(length):
             AI = self.image.AIList[ii]
-            if show:
+            if self.vis.aerial_show:
                 show_img(AI, f"AIList[{ii}]")
                 torch_arr_bound(AI, f"AIList[{ii}]")
-            if save:
-                save_img_from_01torch(AI, f"images/AI/AIList_{ii}.png")
+            if self.vis.aerial_save:
+                save_img_from_01torch(AI, f"{self.vis.aerial_save_path}/AIList_{ii}.png")
 
-    def show_RI(self, show=True, save=False):
+    def show_RI(self):
         length = len(self.image.focusList)
         lengthD = len(self.image.doseList)
         for ii in range(length):
             for jj in range(lengthD):
                 RI = self.image.RIList[ii][jj]
-                if show:
+                if self.vis.resist_show:
                     show_img(RI, f"RIList[{ii}][{jj}]")
                     torch_arr_bound(RI, f"RIList[{ii}][{jj}]")
-                if save:
-                    save_img_from_01torch(RI, f"images/RI/RIList_{ii}{jj}.png")
+                if self.vis.resist_save:
+                    save_img_from_01torch(RI, f"{self.vis.resist_save_path}/RIList_{ii}{jj}.png")
 
 
 if __name__ == "__main__":
-
     # a = time.time()
     m = Mask()
     m.x_range = [-1024.0, 1024.0]
@@ -98,19 +111,19 @@ if __name__ == "__main__":
     # '**************************************************'
 
     # load tcc from db
-    tcc_db = get_tcc("./litho/db/tcclist")
+    # tcc_db = get_tcc("./litho/db/tcclist")
 
-    print("Calculating Aerial image and resist image")
-    a = AerialList(m, tcc_db)
-    a.image.resist_a = 100
-    a.image.resist_tRef = 0.12
+    # print("Calculating Aerial image and resist image")
+    # a = AerialList(m, tcc_db)
+    # a.image.resist_a = 100
+    # a.image.resist_tRef = 0.12
 
-    # a.image.doseList = [0.9, 1, 1.1]
-    # a.image.doseCoef = [0.3, 1, 0.3]
-    a.image.doseList = [1]
-    a.image.doseCoef = [1]
-    a.litho()
-    # a.show_AI(show=False, save=True)
-    a.show_AI(show=True, save=True)
-    # # a.show_RI(show=False, save=True)
-    a.show_RI(show=True, save=True)
+    # # a.image.doseList = [0.9, 1, 1.1]
+    # # a.image.doseCoef = [0.3, 1, 0.3]
+    # a.image.doseList = [1]
+    # a.image.doseCoef = [1]
+    # a.litho()
+    # # a.show_AI(show=False, save=True)
+    # a.show_AI(show=True, save=True)
+    # # # a.show_RI(show=False, save=True)
+    # a.show_RI(show=True, save=True)

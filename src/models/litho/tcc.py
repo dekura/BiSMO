@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-03-31 10:08:59
-LastEditTime: 2023-04-06 11:18:48
+LastEditTime: 2023-04-06 19:27:10
 Contact: cgjcuhk@gmail.com
 Description:
 
@@ -23,16 +23,21 @@ the sci.sparse.linalg.svds != sci.linalg.svd
 TODO:
 If change the device to GPU, we need to compare the runtime performance again.
 """
-import scipy as sci
 import shelve
-import torch
 import time
+
+import scipy as sci
+import torch
+
+from src import utils
 from src.models.litho.lens import LensList
 from src.models.litho.source import Source
 
+log = utils.get_pylogger(__name__)
+
 
 class TCC:
-    """ """
+    """"""
 
     def __init__(self, source, lens):
         self.s = source
@@ -63,7 +68,6 @@ class TCC:
         self.tcc2d = self.jsource * torch.matmul(H, H.t()) / self.s.detaf / self.s.detag
 
     def svd(self):
-
         self.spat_part = torch.zeros(
             (self.gnum, self.fnum, self.gnum, self.fnum), dtype=torch.complex128
         )
@@ -83,8 +87,7 @@ class TCC:
         U, S, V = sci.sparse.linalg.svds(tcc2df.numpy(), self.order)  # faster than torch svd
         U = torch.from_numpy(U.copy())
         S = torch.from_numpy(S.copy())
-        print(f"### sci.sparse.linalg.svds taking {(time.time() - tic):.3f} seconds")
-
+        log.info(f"sci.sparse.linalg.svds taking {(time.time() - tic):.3f} seconds")
 
         self.coefs = S[0 : self.order]
         self.kernels = torch.zeros((self.gnum, self.fnum, self.order), dtype=torch.complex128)
@@ -93,14 +96,19 @@ class TCC:
 
 
 class TCCList(TCC):
-    def __init__(self, source, lensList):
+    def __init__(self, source: Source, lensList: LensList, order: int = 7):
         self.s = source
         self.PSFList = lensList.sDataList
-        self.order = 7
+        self.order = order
         self.focusList = lensList.focusList
         self.focusCoef = lensList.focusCoef
         self.kernelList = []
         self.coefList = []
+
+        """
+        Process calculation
+        """
+        self.calculate()
 
     def calculate(self):
         self.calMutualIntensity()
@@ -113,10 +121,7 @@ class TCCList(TCC):
 
 
 class TCCDB:
-    def __init__(
-            self,
-            dbPath
-            ):
+    def __init__(self, dbPath):
         self.s = None
         self.PSFList = []
         self.order = None
@@ -173,8 +178,7 @@ if __name__ == "__main__":
     tcc = TCCList(s, o)
     tcc.calculate()
 
-
     # calculate the time for tcc
     # save the tcc matrices.
-    tdb = TCCDB('./db/torch_sci.sparse.svds.tcc')
+    tdb = TCCDB("./db/torch_sci.sparse.svds.tcc")
     tdb.save_db(tcc)

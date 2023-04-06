@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-03-23 14:56:21
-LastEditTime: 2023-04-06 15:39:51
+LastEditTime: 2023-04-06 19:24:46
 Contact: cgjcuhk@gmail.com
 Description: Litho Main Function
 """
@@ -10,6 +10,7 @@ from typing import List, Tuple
 
 import hydra
 import pyrootutils
+
 # from lightning import LightningDataModule, LightningModule, Trainer
 # from src.models.litho import Source, LensList, TCCList, Mask, AerialList
 from lightning.pytorch.loggers import Logger
@@ -34,7 +35,7 @@ pyrootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 # ------------------------------------------------------------------------------------ #
 
 from src import utils
-from src.models.litho import Source, LensList, TCCList, Mask, AerialList
+from src.models.litho import AerialList, LensList, Mask, Source, TCCList
 
 log = utils.get_pylogger(__name__)
 
@@ -54,53 +55,31 @@ def litho(cfg: DictConfig) -> Tuple[dict, dict]:
     """
 
     # assert cfg.ckpt_path
-    #TODO What should be assert?
+    # TODO What should be assert?
 
     log.info(f"Instantiating Source <{cfg.source._target_}>")
     s: Source = hydra.utils.instantiate(cfg.source)
-    s.update()
-    s.ifft()
 
     log.info(f"Instantiating Lens <{cfg.lens._target_}>")
     o: LensList = hydra.utils.instantiate(cfg.lens)
-    o.calculate()
 
     log.info("Instantiating loggers...")
     logger: List[Logger] = utils.instantiate_loggers(cfg.get("logger"))
 
     log.info(f"Instantiating TCCList <{cfg.tcc._target_}>")
     t: TCCList = hydra.utils.instantiate(cfg.tcc, source=s, lensList=o)
-    t.order = 30
-    t.calculate()
-    print(t.coefList)
 
     log.info(f"Instantiating Mask <{cfg.mask._target_}>")
     m: Mask = hydra.utils.instantiate(cfg.mask)
-    m.openGDS()
-    print(m.x_range)
-    print(m.y_range)
-    m.maskfft()
 
     log.info(f"Instantiating Aerial and Resist <{cfg.aerial._target_}>")
     a: AerialList = hydra.utils.instantiate(cfg.aerial, mask=m, tccList=t)
-    a.image.resist_a = 100
-    a.image.resist_tRef = 0.12
-    a.image.doseList = [1]
-    a.image.doseCoef = [1]
-
-
-
 
     log.info("Starting Litho!")
-    # trainer.test(model=model, datamodule=datamodule, ckpt_path=cfg.ckpt_path)
     a.litho()
-    a.show_AI(show=True, save=True)
-    a.show_RI(show=True, save=True)
 
     # for predictions use trainer.predict(...)
     # predictions = trainer.predict(model=model, dataloaders=dataloaders, ckpt_path=cfg.ckpt_path)
-
-
 
     object_dict = {
         "cfg": cfg,
@@ -108,12 +87,13 @@ def litho(cfg: DictConfig) -> Tuple[dict, dict]:
         "lenslist": o,
         "logger": logger,
         "TCCList": t,
-        'aerial': a
+        "aerial": a,
     }
 
     if logger:
         log.info("Logging hyperparameters!")
         utils.log_hyperparameters(object_dict)
+
     # metric_dict = trainer.callback_metrics
     # return metric_dict, object_dict
     return {}, object_dict
