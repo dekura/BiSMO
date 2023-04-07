@@ -134,6 +134,10 @@ class Source:
             self.data = s
 
     def ifft(self):
+        """
+        NOTE:
+        the linspace grid is different, here is : 4 * self.fnum + 1
+        """
         fx = np.linspace(-self.fnum * self.detaf, self.fnum * self.detaf, 4 * self.fnum + 1)
         fy = np.linspace(-self.gnum * self.detag, self.gnum * self.detag, 4 * self.gnum + 1)
         FX, FY = np.meshgrid(fx, fy, indexing="xy")
@@ -215,6 +219,11 @@ class Source:
             )
             self.mdata = s
         normlize = 1  # self.detaf * self.detag
+
+        """
+        NOTE:
+        actually, we only use this one in the following calculation.
+        """
         self.spatMutualData = (
             np.fft.fftshift(np.fft.ifft2(np.fft.ifftshift(self.mdata))) * normlize
         )
@@ -235,4 +244,6 @@ if __name__ == "__main__":
     from utils import arr_bound, delta_np_torch, show_img
 
     show_img(s.data, "s.data")
+    show_img(s.mdata, "s.mdata")
+    arr_bound(s.spatMutualData, "s.spatMutualData")
     arr_bound(s.data, "s.data")
