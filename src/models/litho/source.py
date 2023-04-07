@@ -1,6 +1,4 @@
-"""
-
-"""
+""""""
 
 import math
 
@@ -19,11 +17,8 @@ def Edeta(deta, x):
 
 
 class Source:
-    """
-    Source.data is used for Abbe fomulation
-    Source.mdata is used for Hopkins fomulation, Mutual Intensity, TCC calculation
-
-    """
+    """Source.data is used for Abbe fomulation Source.mdata is used for Hopkins fomulation, Mutual
+    Intensity, TCC calculation."""
 
     def __init__(
         self,
@@ -31,12 +26,12 @@ class Source:
         wavelength: float = 193.0,
         maskxpitch: float = 2000.0,
         maskypitch: float = 2000.0,
-        sigma_out:  float = 0.8,
-        sigma_in:   float = 0.6,
+        sigma_out: float = 0.8,
+        sigma_in: float = 0.6,
         smooth_deta: float = 0.03,
         source_type: str = "annular",
-        shiftAngle: float =  math.pi / 4,
-        openAngle:  float = math.pi / 16,
+        shiftAngle: float = math.pi / 4,
+        openAngle: float = math.pi / 16,
     ):
         self.na = na
         self.wavelength = wavelength
@@ -56,19 +51,15 @@ class Source:
         self.fnum = int(np.ceil(2 / self.detaf))
         self.gnum = int(np.ceil(2 / self.detag))
 
-        fx = np.linspace(
-            -self.fnum * self.detaf, self.fnum * self.detaf, 2 * self.fnum + 1
-        )
-        fy = np.linspace(
-            -self.gnum * self.detag, self.gnum * self.detag, 2 * self.gnum + 1
-        )
+        fx = np.linspace(-self.fnum * self.detaf, self.fnum * self.detaf, 2 * self.fnum + 1)
+        fy = np.linspace(-self.gnum * self.detag, self.gnum * self.detag, 2 * self.gnum + 1)
         FX, FY = np.meshgrid(fx, fy, indexing="xy")
 
-        r = np.sqrt(FX ** 2 + FY ** 2)
+        r = np.sqrt(FX**2 + FY**2)
         theta = np.arctan2(FY, FX)
         theta[r > 1] = 0
         r[r > 1] = 0
-        s0 = np.sqrt(FX ** 2 + FY ** 2)
+        s0 = np.sqrt(FX**2 + FY**2)
         s0[s0 <= 1] = 1
         s0[s0 > 1] = 0
 
@@ -96,26 +87,22 @@ class Source:
                     Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(1.0 * math.pi -
-                                 np.abs(self.shiftAngle - self.theta)),
+                        - np.abs(1.0 * math.pi - np.abs(self.shiftAngle - self.theta)),
                     )
                     + Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(0.5 * math.pi -
-                                 np.abs(self.shiftAngle - self.theta)),
+                        - np.abs(0.5 * math.pi - np.abs(self.shiftAngle - self.theta)),
                     )
                     + Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(-0.5 * math.pi -
-                                 np.abs(self.shiftAngle - self.theta)),
+                        - np.abs(-0.5 * math.pi - np.abs(self.shiftAngle - self.theta)),
                     )
                     + Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(-0.0 * math.pi -
-                                 np.abs(self.shiftAngle - self.theta)),
+                        - np.abs(-0.0 * math.pi - np.abs(self.shiftAngle - self.theta)),
                     )
                 )
                 * self.s0
@@ -132,8 +119,7 @@ class Source:
                     )
                     + Edeta(
                         self.smooth_deta,
-                        self.openAngle
-                        - np.abs(math.pi - np.abs(self.shiftAngle - self.theta)),
+                        self.openAngle - np.abs(math.pi - np.abs(self.shiftAngle - self.theta)),
                     )
                 )
                 * self.s0
@@ -148,19 +134,15 @@ class Source:
             self.data = s
 
     def ifft(self):
-        fx = np.linspace(
-            -self.fnum * self.detaf, self.fnum * self.detaf, 4 * self.fnum + 1
-        )
-        fy = np.linspace(
-            -self.gnum * self.detag, self.gnum * self.detag, 4 * self.gnum + 1
-        )
+        fx = np.linspace(-self.fnum * self.detaf, self.fnum * self.detaf, 4 * self.fnum + 1)
+        fy = np.linspace(-self.gnum * self.detag, self.gnum * self.detag, 4 * self.gnum + 1)
         FX, FY = np.meshgrid(fx, fy, indexing="xy")
 
-        r = np.sqrt(FX ** 2 + FY ** 2)
+        r = np.sqrt(FX**2 + FY**2)
         theta = np.arctan2(FY, FX)
         theta[r > 1] = 0
         r[r > 1] = 0
-        s0 = np.sqrt(FX ** 2 + FY ** 2)
+        s0 = np.sqrt(FX**2 + FY**2)
         s0 = np.where(s0 > 1.0, 0.0, 1.0)
 
         self.r = r
@@ -187,26 +169,22 @@ class Source:
                     Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(1.0 * math.pi -
-                                 np.abs(self.shiftAngle - self.theta)),
+                        - np.abs(1.0 * math.pi - np.abs(self.shiftAngle - self.theta)),
                     )
                     + Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(0.5 * math.pi -
-                                 np.abs(self.shiftAngle - self.theta)),
+                        - np.abs(0.5 * math.pi - np.abs(self.shiftAngle - self.theta)),
                     )
                     + Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(-0.5 * math.pi -
-                                 np.abs(self.shiftAngle - self.theta)),
+                        - np.abs(-0.5 * math.pi - np.abs(self.shiftAngle - self.theta)),
                     )
                     + Edeta(
                         self.smooth_deta,
                         self.openAngle
-                        - np.abs(-0.0 * math.pi -
-                                 np.abs(self.shiftAngle - self.theta)),
+                        - np.abs(-0.0 * math.pi - np.abs(self.shiftAngle - self.theta)),
                     )
                 )
                 * self.s0
@@ -223,8 +201,7 @@ class Source:
                     )
                     + Edeta(
                         self.smooth_deta,
-                        self.openAngle
-                        - np.abs(math.pi - np.abs(self.shiftAngle - self.theta)),
+                        self.openAngle - np.abs(math.pi - np.abs(self.shiftAngle - self.theta)),
                     )
                 )
                 * self.s0
@@ -239,19 +216,23 @@ class Source:
             self.mdata = s
         normlize = 1  # self.detaf * self.detag
         self.spatMutualData = (
-            np.fft.fftshift(np.fft.ifft2(
-                np.fft.ifftshift(self.mdata))) * normlize
+            np.fft.fftshift(np.fft.ifft2(np.fft.ifftshift(self.mdata))) * normlize
         )
 
 
 if __name__ == "__main__":
     s = Source()
-    s.type = "annular"
+    # s.type = "annular"
+    # s.type = "conventional"
+    # s.type = "quasar"
+    # s.type = "dipole"
     s.sigma_in = 0.6
     s.sigma_out = 0.8
     s.smooth_deta = 0
     s.update()
     s.ifft()
 
-    from utils import arr_bound, delta_np_torch
+    from utils import arr_bound, delta_np_torch, show_img
+
+    show_img(s.data, "s.data")
     arr_bound(s.data, "s.data")
