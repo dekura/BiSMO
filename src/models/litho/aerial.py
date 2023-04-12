@@ -2,13 +2,12 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2022-10-01 15:53:02
-LastEditTime: 2023-03-23 16:21:28
+LastEditTime: 2023-04-12 16:18:38
 Contact: gjchen21@cse.cuhk.edu.hk
 Description:  use litho model to get the aerial image.
 """
 from pathlib import Path
 
-import torch
 
 from src.models.litho.config import PATH
 from src.models.litho.image import ImageHopkins, ImageHopkinsList
