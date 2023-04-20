@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-03-29 15:45:14
-LastEditTime: 2023-03-29 18:45:43
+LastEditTime: 2023-04-19 17:04:31
 Contact: cgjcuhk@gmail.com
 Description:
 
@@ -23,6 +23,8 @@ def Edeta(deta, x):
         g = torch.zeros(x.shape, dtype=torch.float64)
         g[x >= 0] = 1
         return g
+
+LOW_LIGHT_THRES = 1e-3
 
 
 class Source:
@@ -154,6 +156,23 @@ class Source:
             )
             self.data = s
 
+    def simple_source(self):
+        # print(self.fx)
+        fx = self.fx
+        fy = self.fy
+        size_x = fx.shape[0]
+        size_y = fx.shape[1]
+        fx1d = torch.reshape(fx, (size_x * size_y, 1))
+        fy1d = torch.reshape(fy, (size_x * size_y, 1))
+        self.fx1d = fx1d
+        self.fy1d = fy1d
+
+        self.simple_mdata = torch.reshape(self.mdata, (size_x * size_y, 1))
+        high_light_mask = self.simple_mdata.ge(LOW_LIGHT_THRES)
+        self.simple_mdata = torch.masked_select(self.simple_mdata, high_light_mask)
+        self.simple_fx = torch.masked_select(self.fx1d, high_light_mask)
+        self.simple_fy = torch.masked_select(self.fy1d, high_light_mask)
+
     def ifft(self):
         fx = torch.linspace(
             -self.fnum * self.detaf, self.fnum * self.detaf, 4 * self.fnum + 1
@@ -259,7 +278,7 @@ if __name__ == "__main__":
     s.smooth_deta = 0
     s.update()
     s.ifft()
-
+    s.simple_source()
     # compare with the numpy version
 
     from utils import arr_bound, torch_arr_bound, delta_np_torch
@@ -290,3 +309,8 @@ if __name__ == "__main__":
     # delta_np_torch(np_s.mdata, s.mdata)
     # delta_np_torch(np_s.spatMutualData, s.spatMutualData)
     # delta_np_torch(np_s.spatMutualData.real, s.spatMutualData.real)
+
+    torch_arr_bound(s.fx1d, "s.fx1d")
+    torch_arr_bound(s.mdata, "s.mdata")
+    torch_arr_bound(s.simple_mdata, "s.simple_mdata")
+    torch_arr_bound(s.simple_fx, "s.simple_fx")

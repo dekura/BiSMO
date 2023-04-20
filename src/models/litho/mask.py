@@ -7,6 +7,7 @@ from PIL import Image, ImageDraw
 from litho.config import PATH
 from litho.consts import IMAGE_WH
 from litho.gdsii.library import Library
+from utils import arr_bound
 
 
 class Mask:
@@ -229,8 +230,7 @@ if __name__ == "__main__":
     m.y_gridsize = 10
     m.openGDS(PATH.gdsdir / "AND2_X4.gds", 10)
     m.maskfft()
-    m.smooth()
-
+    # m.smooth()
     plt.imshow(
         m.data,
         extent=(m.x_range[0], m.x_range[1], m.y_range[0], m.y_range[1]),

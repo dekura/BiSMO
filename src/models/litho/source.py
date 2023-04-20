@@ -6,6 +6,10 @@ import numpy as np
 from scipy.special import erf
 
 
+
+LOW_LIGHT_THRES = 1e-5
+
+
 def Edeta(deta, x):
     if deta != 0:
         g = 0.5 * (1 + erf(x / deta))
@@ -133,6 +137,23 @@ class Source:
             )
             self.data = s
 
+    def simple_source(self):
+        # print(self.fx)
+        fx = self.fx
+        fy = self.fy
+        size_x = fx.shape[0]
+        size_y = fx.shape[1]
+        fx1d = np.reshape(fx, (size_x * size_y, 1))
+        fy1d = np.reshape(fy, (size_x * size_y, 1))
+        self.fx1d = fx1d
+        self.fy1d = fy1d
+
+        self.simple_mdata = np.reshape(self.mdata, (size_x * size_y, 1))
+        low_light_index = np.where(self.simple_mdata < LOW_LIGHT_THRES)
+        self.simple_mdata = np.delete(self.simple_mdata, low_light_index)
+        self.simple_fx = np.delete(self.fx1d, low_light_index)
+        self.simple_fy = np.delete(self.fy1d, low_light_index)
+
     def ifft(self):
         """
         NOTE:
@@ -243,7 +264,13 @@ if __name__ == "__main__":
 
     from utils import arr_bound, delta_np_torch, show_img
 
-    show_img(s.data, "s.data")
-    show_img(s.mdata, "s.mdata")
+    # show_img(s.data, "s.data")
+    # show_img(s.mdata, "s.mdata")
     arr_bound(s.spatMutualData, "s.spatMutualData")
     arr_bound(s.data, "s.data")
+    arr_bound(s.fx, "s.fx")
+    s.simple_source()
+    arr_bound(s.fx1d, "s.fx1d")
+    arr_bound(s.mdata, "s.mdata")
+    arr_bound(s.simple_mdata, "s.simple_mdata")
+    arr_bound(s.simple_fx, "s.simple_fx")
