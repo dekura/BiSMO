@@ -2,9 +2,9 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-04-12 15:29:06
-LastEditTime: 2023-04-20 16:01:56
+LastEditTime: 2023-04-25 19:54:30
 Contact: cgjcuhk@gmail.com
-Description: 
+Description:
 """
 """
 """
@@ -64,39 +64,6 @@ class ICC:
         # self.finalAI = torch.zeros((self.y_gridnum, self.x_gridnum))
 
 
-    # def calMutualIntensity(self):
-    #     self.gnum, self.fnum = self.s.data.shape
-    #     J = torch.zeros((self.gnum, self.fnum, self.gnum, self.fnum), dtype=torch.float64)
-    #     for ii in range(self.gnum):
-    #         for jj in range(self.fnum):
-    #             J[:, :, ii, jj] = self.s.spatMutualData.real[
-    #                 (self.gnum - ii - 1) : (2 * self.gnum - ii - 1),
-    #                 (self.fnum - jj - 1) : (2 * self.fnum - jj - 1),
-    #             ]
-    #     self.jsource = torch.reshape(J, (self.gnum * self.fnum, self.gnum, self.fnum))
-        # self.jsource = torch.reshape(J, (self.gnum, self.fnum, self.gnum * self.fnum))
-        # self.jsource = torch.reshape(self.jsource, (self.gnum * self.fnum * self.gnum * self.fnum, 1))
-
-    # def calSpatICC(self):
-        # abbe2d_freq = torch.zeros((self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex128)
-        # abbe2d_freq[self.y1 : self.y2, self.x1 : self.x2] = self.psf  * self.mask.fdata[self.y1 : self.y2, self.x1 : self.x2]
-        # self.icc2d = torch.fft.fftshift(torch.fft.ifft2(torch.fft.ifftshift(abbe2d_freq)))
-        # self.icc2d = abbe2d_freq
-        # self.icc2d = torch.abs(self.icc2d * self.icc2d)
-        # self.icc2d = torch.abs(abbe2d_freq * torch.conj(abbe2d_freq))
-        # self.icc2d =  torch.fft.fftshift(torch.fft.ifft2(torch.fft.ifftshift(self.icc2d)))
-        # self.icc2d = torch.real(self.icc2d)
-        # abbe2d_spat = torch.fft.fftshift(torch.fft.ifft2(torch.fft.ifftshift(abbe2d_freq)))
-        # self.abbe2d_spat = abbe2d_spat
-        # self.icc2d = torch.abs(abbe2d_spat * torch.conj(abbe2d_spat))
-
-    # def icc2dfft(self):
-    #     self.icc2d_spat_part[:] = torch.fft.ifftshift(self.abbe2d_spat)
-    #     self.icc2d_freq_part = torch.fft.fftn(self.icc2d_spat_part)
-    #     self.icc2d_fdata = torch.fft.fftshift(self.icc2d_freq_part)
-    #     self.icc2d_fdata = torch.abs(self.icc2d_fdata * self.icc2d_fdata)
-
-
     def calPupil(self, FX, FY):
         R = torch.sqrt(FX ** 2 + FY ** 2)
         TH = torch.arctan2(FY, FX)
@@ -129,9 +96,11 @@ class ICC:
         # mask_fg2m = mask
         mask_fg2m = mask_fm.pow(2) + mask_gm.pow(2)
 
-        self.s.simple_mdata = self.s.simple_mdata[100:]
-        self.s.simple_fx = self.s.simple_fx[100:]
-        self.s.simple_fy = self.s.simple_fy[100:]
+        total_source = self.s.simple_mdata.shape[0]
+        print(f"totol source number : {total_source}")
+        self.s.simple_mdata = self.s.simple_mdata[:total_source]
+        self.s.simple_fx = self.s.simple_fx[:total_source]
+        self.s.simple_fy = self.s.simple_fy[:total_source]
 
         sourceX = self.s.simple_fx
         sourceY = self.s.simple_fy
@@ -144,18 +113,19 @@ class ICC:
             ), dtype=torch.float32)
         # print(sourceX)
         weight = torch.sum(self.s.simple_mdata)
-        print("start")
+        # print("start")
         for i in range(self.s.simple_mdata.shape[0]):
-            print(i)
-            if i>100:
-                break
+            # print(i)
             rho2 = mask_fg2m + 2 * (sourceX[i] * mask_fm + sourceY[i] * mask_gm) + sourceXY2[i]
             valid_source_mask = rho2.le(1)
+            # torch_arr_bound(valid_source_mask, f"valid_source_mask {i}")
             f_calc = torch.masked_select(mask_fm, valid_source_mask)
             g_calc = torch.masked_select(mask_gm, valid_source_mask)
             valid_mask_fdata = torch.masked_select(self.mask.fdata[self.y1 : self.y2, self.x1 : self.x2], valid_source_mask)
 
             self.calPupil(f_calc, g_calc)
+
+            # torch_arr_bound(self.pupil_fdata, f"self.pupil fdata on source[{i}]")
             tempHAber = valid_mask_fdata * self.pupil_fdata
 
             e_field = torch.zeros(
@@ -164,6 +134,7 @@ class ICC:
 
             ExyzFrequency = torch.zeros(rho2.shape, dtype=torch.complex128)
             ExyzFrequency[valid_source_mask] = tempHAber
+            # torch_arr_bound(ExyzFrequency, f"ExyzFrequency[{i}]")
 
             e_field[self.y1 : self.y2, self.x1 : self.x2] = ExyzFrequency
             # Exyz_Partial = torch.fft.ifft2(ExyzFrequency)
@@ -176,30 +147,40 @@ class ICC:
         self.intensity2D =  intensity2D / weight
 
 if __name__ == "__main__":
+    gds_max_x = 1024
+    gds_max_y = 1024
+    MASK_W = 1024
+    MASK_H = 1024
+
     s = Source()
+    # s.type = "coventional"
+    # s.type = "annular"
+    # s.type = "quasar"
     s.type = "dipole"
     s.na = 1.35
-    s.maskxpitch = 2048
-    s.maskypitch = 2048
+    s.maskxpitch = MASK_W
+    s.maskypitch = MASK_H
     s.sigma_out = 0.9
     s.sigma_in = 0.6
     s.smooth_deta = 0
     s.shiftAngle = 0
-    s.update()
-    s.ifft()
-    print(s.data.size())
+    # s.update()
+    # s.ifft()
+    # print(s.data.size())
 
 
     o = LensList()
-    o.maskxpitch = 2048
-    o.maskypitch = 2048
+    o.maskxpitch = MASK_W
+    o.maskypitch = MASK_H
     o.na = 1.35
     o.focusList = [0.0]
     o.focusCoef = [1.0]
     # o.calculate()
 
     gds_path = "/home/gjchen21/phd/projects/smo/SMO-ICCAD23/data/NanGateLibGDS/NOR2_X2.gds"
-    m = Mask(gds_path, 11)
+    m = Mask(gds_path, 11, xmax=gds_max_x, ymax=gds_max_y, maskxpitch=MASK_W, maskypitch=MASK_H)
+    print(m.x_gridsize)
+    # m.x_range = [ ]
     m.openGDS()
     m.maskfft()
 
@@ -210,6 +191,7 @@ if __name__ == "__main__":
 
     torch_arr_bound(icc.intensity2D, "icc.intensity2D")
     show_img(icc.intensity2D, "icc.intensity2D")
+    show_img(m.data, "m.data")
     # torch_arr_bound(icc.icc2d, "icc.icc2d")
     # show_img(icc.icc2d, "icc.icc2d")
     # torch_arr_bound(icc.jsource, "icc.jsource")

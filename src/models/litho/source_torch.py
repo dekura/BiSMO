@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-03-29 15:45:14
-LastEditTime: 2023-04-19 17:04:31
+LastEditTime: 2023-04-25 19:41:29
 Contact: cgjcuhk@gmail.com
 Description:
 
@@ -24,7 +24,7 @@ def Edeta(deta, x):
         g[x >= 0] = 1
         return g
 
-LOW_LIGHT_THRES = 1e-3
+LOW_LIGHT_THRES = 1e-5
 
 
 class Source:

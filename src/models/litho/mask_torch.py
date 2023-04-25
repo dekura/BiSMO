@@ -5,7 +5,6 @@ from PIL import Image, ImageDraw
 
 from gdsii.library import Library
 
-IMAGE_WH = 2048
 
 
 class Mask:
@@ -53,17 +52,21 @@ class Mask:
         self,
         gds_path: str,
         layername: int = 11,
-        pixels_per_um: int = 100,
+        pixels_per_um: int = 1000,
         xmax=1024,
         ymax=1024,
-        x_gridsize=1,
-        y_gridsize=1,
+        maskxpitch = 2048,
+        maskypitch = 2048,
         CD=45,
     ):
         self.x_range = [-xmax, xmax]  # nm
         self.y_range = [-ymax, ymax]
-        self.x_gridsize = x_gridsize  # nm
-        self.y_gridsize = y_gridsize
+        self.maskxpitch = maskxpitch
+        self.maskypitch = maskypitch
+        self.x_gridsize = 2 * xmax // maskxpitch # nm
+        self.y_gridsize = 2 * ymax // maskypitch
+        print(f"mask x_gridsize: {self.x_gridsize}")
+        print(f"mask y_gridsize: {self.y_gridsize}")
         self.mask_groups = []
         self.CD = CD
         self.gds_path = gds_path
@@ -118,7 +121,7 @@ class Mask:
             if a[ii].layer == layername:
                 # if hasattr(a[ii],'data_type'):
                 if len(a[ii].xy) > 1:
-                    aa = np.array(a[ii].xy) / 1000 * pixels_per_um
+                    aa = np.array(a[ii].xy) / 10000 * pixels_per_um
                     b.append(aa)
                     xmin.append(min([k for k, v in aa]))
                     xmax.append(max([k for k, v in aa]))
@@ -136,41 +139,36 @@ class Mask:
 
         cpoints = []
 
-        cx_r = np.arange(center_x, xmax, IMAGE_WH // 2)
-        cx_l = -np.arange(-center_x, -xmin, IMAGE_WH // 2)
+        coords_width = self.maskxpitch * self.x_gridsize
+        cx_r = np.arange(center_x, xmax,   coords_width // 2)
+        cx_l = -np.arange(-center_x, -xmin, coords_width // 2)
         cxs = np.hstack((cx_l, cx_r))
 
-        cy_u = np.arange(center_y, ymax, IMAGE_WH // 2)
-        cy_d = -np.arange(-center_y, -ymin, IMAGE_WH // 2)
+        coords_height = self.maskypitch * self.y_gridsize
+        cy_u = np.arange(center_y, ymax,  coords_height // 2)
+        cy_d = -np.arange(-center_y, -ymin, coords_height // 2)
         cys = np.hstack((cy_d, cy_u))
-        # cys = np.arange(ymin, ymax - IMAGE_WH // 2, IMAGE_WH // 2)
 
         for x in cxs:
             for y in cys:
                 cpoints.append((x, y))
 
         cpoints = list(set(cpoints))
-        # center_x = (xmax - xmin) // 2
-        # center_y = (ymax - ymin) // 2
-        # xmin = center_x - (IMAGE_WH // 2)
-        # ymin = center_y - (IMAGE_WH // 2)
-        # xmax = xmin + IMAGE_WH
-        # ymax = ymin + IMAGE_WH
 
         # spoints.append((xmin, ymin))
 
         # print(spoints)
 
         for cc in cpoints:
-            self.xmin = cc[0] - (IMAGE_WH // 2)
-            self.xmax = self.xmin + IMAGE_WH
-            self.ymin = cc[1] - (IMAGE_WH // 2)
-            self.ymax = self.ymin + IMAGE_WH
+            self.xmin = cc[0] - (coords_width // 2)
+            self.xmax = self.xmin + coords_width
+            self.ymin = cc[1] - (coords_height // 2)
+            self.ymax = self.ymin + coords_height
             self.x_range = [self.xmin, self.xmax]
             self.y_range = [self.ymin, self.ymax]
 
-            self.x_gridnum = int((self.xmax - self.xmin) / self.x_gridsize)
-            self.y_gridnum = int((self.ymax - self.ymin) / self.y_gridsize)
+            self.x_gridnum = int(self.maskxpitch)
+            self.y_gridnum = int(self.maskypitch)
             img = Image.new("L", (self.x_gridnum, self.y_gridnum), 0)
 
             self.perimeter = 0.0
