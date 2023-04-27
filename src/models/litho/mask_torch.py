@@ -50,7 +50,7 @@ class Mask:
 
     def __init__(
         self,
-        gds_path: str,
+        layout_path: str,
         layername: int = 11,
         pixels_per_um: int = 1000,
         xmax=1024,
@@ -69,15 +69,15 @@ class Mask:
         print(f"mask y_gridsize: {self.y_gridsize}")
         self.mask_groups = []
         self.CD = CD
-        self.gds_path = gds_path
+        self.layout_path = layout_path
         self.layername = layername
         self.pixels_per_um = pixels_per_um
 
         """
         Process calculation
         """
-        self.openGDS()
-        self.maskfft()
+        # self.openGDS()
+        # self.maskfft()
 
     def poly2mask(self):
         """Get Pixel-based Mask Image from Polygon Data The Poylgon Data Form are sensitive Similar
@@ -104,7 +104,7 @@ class Mask:
         self.freq_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex128)
 
     def openGDS(self):
-        gdsdir = self.gds_path
+        gdsdir = self.layout_path
         layername = self.layername
         pixels_per_um = self.pixels_per_um
 
@@ -191,6 +191,16 @@ class Mask:
         # Fourier transform pair, pyfftw syntax
         self.spat_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex128)
         self.freq_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex128)
+
+    def open_img(self):
+        img = Image.open(self.layout_path)
+        img = img.convert("L")
+        self.mask_groups.append(torch.from_numpy(np.array(img)))
+        self.data = self.mask_groups[0]
+        # Fourier transform pair, pyfftw syntax
+        self.spat_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex128)
+        self.freq_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex128)
+
 
     # use the fftw packages
     def maskfft(self):

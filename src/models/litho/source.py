@@ -259,13 +259,15 @@ if __name__ == "__main__":
     s.sigma_in = 0.6
     s.sigma_out = 0.8
     s.smooth_deta = 0
+    s.maskxpitch = 1280
+    s.maskypitch = 1280
     s.update()
     s.ifft()
 
     from utils import arr_bound, delta_np_torch, show_img
 
-    # show_img(s.data, "s.data")
-    # show_img(s.mdata, "s.mdata")
+    show_img(s.data, "s.data")
+    show_img(s.mdata, "s.mdata")
     arr_bound(s.spatMutualData, "s.spatMutualData")
     arr_bound(s.data, "s.data")
     arr_bound(s.fx, "s.fx")
