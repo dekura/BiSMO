@@ -29,9 +29,9 @@ class ImageHopkins:
         self.y2 = int(self.mask.y_gridnum // 2 + self.tcc.s.gnum + 1)
 
 
-        self.spat_part = torch.zeros((self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex128)
+        self.spat_part = torch.zeros((self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex64)
 
-        self.freq_part = torch.zeros((self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex128)
+        self.freq_part = torch.zeros((self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex64)
 
         # self.ifft_image = pyfftw.FFTW(
         #     self.freq_part, self.spat_part, axes=(0, 1), direction="FFTW_BACKWARD"
@@ -39,10 +39,10 @@ class ImageHopkins:
 
     def calAI(self):  # much faster than calAIold()
         AI_freq_dense = torch.zeros(
-            (self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex128
+            (self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex64
         )
         AI_freq_sparse = torch.zeros(
-            (int(self.y2 - self.y1), int(self.x2 - self.x1)), dtype=torch.complex128
+            (int(self.y2 - self.y1), int(self.x2 - self.x1)), dtype=torch.complex64
         )
         for ii in range(self.order):
             self.x1 = int(self.x1)
@@ -77,7 +77,7 @@ class ImageHopkins:
         AI = torch.zeros((self.mask.y_gridnum, self.mask.x_gridnum))
         for ii in range(self.order):
             e_field = torch.zeros(
-                (self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex128
+                (self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex64
             )
             e_field[self.y1 : self.y2, self.x1 : self.x2] = (
                 self.kernels[:, :, ii]
@@ -119,9 +119,9 @@ class ImageHopkinsList(ImageHopkins):
         # self.freq_part = pyfftw.empty_aligned(
         #     (self.mask.y_gridnum, self.mask.x_gridnum), dtype="complex128"
         # )
-        self.spat_part = torch.zeros((self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex128)
+        self.spat_part = torch.zeros((self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex64)
 
-        self.freq_part = torch.zeros((self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex128)
+        self.freq_part = torch.zeros((self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex64)
 
         # self.ifft_image = pyfftw.FFTW(
         #     self.freq_part, self.spat_part, axes=(0, 1), direction="FFTW_BACKWARD"

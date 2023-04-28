@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-03-31 10:08:59
-LastEditTime: 2023-04-12 19:02:23
+LastEditTime: 2023-04-28 01:14:01
 Contact: cgjcuhk@gmail.com
 Description:
 
@@ -55,7 +55,7 @@ class TCC:
 
     def calMutualIntensity(self):
         self.gnum, self.fnum = self.s.data.shape
-        J = torch.zeros((self.gnum, self.fnum, self.gnum, self.fnum), dtype=torch.complex128)
+        J = torch.zeros((self.gnum, self.fnum, self.gnum, self.fnum), dtype=torch.complex64)
         for ii in range(self.gnum):
             for jj in range(self.fnum):
                 J[:, :, ii, jj] = self.s.spatMutualData.real[
@@ -73,13 +73,13 @@ class TCC:
         #     (self.gnum, self.fnum, self.gnum, self.fnum), dtype="complex128"
         # )
         self.spat_part = torch.zeros(
-            (self.gnum, self.fnum, self.gnum, self.fnum), dtype=torch.complex128
+            (self.gnum, self.fnum, self.gnum, self.fnum), dtype=torch.complex64
         )
         # self.freq_part = pyfftw.empty_aligned(
         #     (self.gnum, self.fnum, self.gnum, self.fnum), dtype="complex128"
         # )
         self.freq_part = torch.zeros(
-            (self.gnum, self.fnum, self.gnum, self.fnum), dtype=torch.complex128
+            (self.gnum, self.fnum, self.gnum, self.fnum), dtype=torch.complex64
         )
         # self.fft_svd = pyfftw.FFTW(self.spat_part, self.freq_part, axes=(0, 1, 2, 3))
 
@@ -110,7 +110,7 @@ class TCC:
 
 
         self.coefs = S[0 : self.order]
-        self.kernels = torch.zeros((self.gnum, self.fnum, self.order), dtype=torch.complex128)
+        self.kernels = torch.zeros((self.gnum, self.fnum, self.order), dtype=torch.complex64)
         for ii in range(self.order):
             self.kernels[:, :, ii] = torch.reshape(U[:, ii], (self.gnum, self.fnum))
 

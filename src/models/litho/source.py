@@ -141,9 +141,10 @@ class Source:
         # print(self.fx)
         fx = self.fx
         fy = self.fy
-        size_x = fx.shape[0]
-        size_y = fx.shape[1]
+        size_x, size_y = fx.shape[0], fx.shape[1]
         fx1d = np.reshape(fx, (size_x * size_y, 1))
+
+        size_x, size_y = fy.shape[0], fy.shape[1]
         fy1d = np.reshape(fy, (size_x * size_y, 1))
         self.fx1d = fx1d
         self.fy1d = fy1d
@@ -268,11 +269,12 @@ if __name__ == "__main__":
 
     show_img(s.data, "s.data")
     show_img(s.mdata, "s.mdata")
-    arr_bound(s.spatMutualData, "s.spatMutualData")
     arr_bound(s.data, "s.data")
-    arr_bound(s.fx, "s.fx")
-    s.simple_source()
-    arr_bound(s.fx1d, "s.fx1d")
-    arr_bound(s.mdata, "s.mdata")
-    arr_bound(s.simple_mdata, "s.simple_mdata")
-    arr_bound(s.simple_fx, "s.simple_fx")
+    # arr_bound(s.spatMutualData, "s.spatMutualData")
+    # arr_bound(s.data, "s.data")
+    # arr_bound(s.fx, "s.fx")
+    # s.simple_source()
+    # arr_bound(s.fx1d, "s.fx1d")
+    # arr_bound(s.mdata, "s.mdata")
+    # arr_bound(s.simple_mdata, "s.simple_mdata")
+    # arr_bound(s.simple_fx, "s.simple_fx")

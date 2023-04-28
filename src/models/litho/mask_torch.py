@@ -99,9 +99,9 @@ class Mask:
 
         self.data = torch.from_numpy(np.array(img))
         # self.data = np.float64(self.data)
-        self.spat_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex128)
+        self.spat_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex64)
 
-        self.freq_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex128)
+        self.freq_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex64)
 
     def openGDS(self):
         gdsdir = self.layout_path
@@ -189,8 +189,8 @@ class Mask:
 
         self.data = self.mask_groups[0]
         # Fourier transform pair, pyfftw syntax
-        self.spat_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex128)
-        self.freq_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex128)
+        self.spat_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex64)
+        self.freq_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex64)
 
     def open_img(self):
         img = Image.open(self.layout_path)
@@ -198,8 +198,8 @@ class Mask:
         self.mask_groups.append(torch.from_numpy(np.array(img)))
         self.data = self.mask_groups[0]
         # Fourier transform pair, pyfftw syntax
-        self.spat_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex128)
-        self.freq_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex128)
+        self.spat_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex64)
+        self.freq_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex64)
 
 
     # use the fftw packages

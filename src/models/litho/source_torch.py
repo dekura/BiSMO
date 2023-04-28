@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-03-29 15:45:14
-LastEditTime: 2023-04-25 19:41:29
+LastEditTime: 2023-04-28 03:40:41
 Contact: cgjcuhk@gmail.com
 Description:
 
@@ -45,7 +45,7 @@ class Source:
         smooth_deta: float = 0.03,
         source_type: str = "annular",
         shiftAngle: float =  math.pi / 4,
-        openAngle:  float = math.pi / 16,
+        openAngle:  float = math.pi / 6,
     ):
         self.na = na
         self.wavelength = wavelength
@@ -160,14 +160,16 @@ class Source:
         # print(self.fx)
         fx = self.fx
         fy = self.fy
-        size_x = fx.shape[0]
-        size_y = fx.shape[1]
+        # print(fx)
+        size_x,  size_y = fx.shape[0], fx.shape[1]
         fx1d = torch.reshape(fx, (size_x * size_y, 1))
+
+        size_x,  size_y = fy.shape[0], fy.shape[1]
         fy1d = torch.reshape(fy, (size_x * size_y, 1))
         self.fx1d = fx1d
         self.fy1d = fy1d
 
-        self.simple_mdata = torch.reshape(self.mdata, (size_x * size_y, 1))
+        self.simple_mdata = torch.reshape(self.data, (size_x * size_y, 1))
         high_light_mask = self.simple_mdata.ge(LOW_LIGHT_THRES)
         self.simple_mdata = torch.masked_select(self.simple_mdata, high_light_mask)
         self.simple_fx = torch.masked_select(self.fx1d, high_light_mask)
@@ -277,7 +279,7 @@ if __name__ == "__main__":
     s.sigma_out = 0.8
     s.smooth_deta = 0
     s.update()
-    s.ifft()
+    # s.ifft()
     s.simple_source()
     # compare with the numpy version
 

@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-04-12 15:29:06
-LastEditTime: 2023-04-26 17:05:03
+LastEditTime: 2023-04-28 03:43:51
 Contact: cgjcuhk@gmail.com
 Description:
 """
@@ -10,82 +10,67 @@ Description:
 # from src.models.litho.source import Source
 
 
-import numpy as np
-import pyfftw
-import scipy as sci
-import shelve
-import time
 import copy
 import torch
-from lens_torch import LensList
 from source_torch import Source
 from mask_torch import Mask
-from zernike_torch import zerniken
 from utils import torch_arr_bound, show_img
 class ICC:
     """
     The illumination-cross coefficient.
     """
 
-    def __init__(self, source, lens, mask):
+    def __init__(self, source, mask):
         self.s = source
         self.s.update()
-        self.s.ifft()
+        # self.s.ifft()
+        print(f"s.data.shape: {self.s.data.shape}")
         self.s.simple_source()
-
-        self.lens = lens
-        self.lens.update()
-        self.lens.calPupil()
-        self.lens.calPSF()
 
         self.mask = mask
         self.mask.maskfft()
 
-        self.psf = lens.data
+        # self.psf = lens.data
 
-        self.norm = self.mask.y_gridnum * self.mask.x_gridnum
 
-        self.x1 = int(self.mask.x_gridnum // 2 - self.lens.fnum)
-        self.x2 = int(self.mask.x_gridnum // 2 + self.lens.fnum + 1)
-        self.y1 = int(self.mask.y_gridnum // 2 - self.lens.gnum)
-        self.y2 = int(self.mask.y_gridnum // 2 + self.lens.gnum + 1)
+        self.gnum = self.s.gnum
+        self.fnum = self.s.fnum
+
+        self.x1 = int(self.mask.x_gridnum // 2 - self.fnum)
+        self.x2 = int(self.mask.x_gridnum // 2 + self.fnum + 1)
+        self.y1 = int(self.mask.y_gridnum // 2 - self.gnum)
+        self.y2 = int(self.mask.y_gridnum // 2 + self.gnum + 1)
 
         self.x_gridnum = self.mask.x_gridnum
         self.y_gridnum = self.mask.y_gridnum
 
-        self.gnum = self.lens.gnum
-        self.fnum = self.lens.fnum
-
-        self.aerial = torch.zeros((self.y_gridnum, self.x_gridnum))
-        self.icc2d_spat_part = torch.zeros(
-            (self.y_gridnum, self.x_gridnum), dtype=torch.complex128)
-        self.icc2d_freq_part = torch.zeros(
-            (self.y_gridnum, self.x_gridnum), dtype=torch.complex128)
-        # self.finalAI = torch.zeros((self.y_gridnum, self.x_gridnum))
 
     def calPupil(self, FX, FY):
         R = torch.sqrt(FX ** 2 + FY ** 2)
-        TH = torch.arctan2(FY, FX)
-        H = copy.deepcopy(R)
+        # TH = torch.arctan2(FY, FX)
+        # H = copy.deepcopy(R)
+        H = R.detach().clone()
         H = torch.where(H > 1.0, 0.0, 1.0)
         R[R > 1.0] = 0.0
 
-        W = torch.zeros(R.shape, dtype=torch.complex128)
+        W = torch.zeros(R.shape, dtype=torch.complex64)
 
-        for ii in range(len(self.lens.Zn)):
-            W = W + zerniken(self.lens.Zn[ii], R, TH) * self.lens.Cn[ii]
+        # for ii in range(len(self.lens.Zn)):
+        #     W = W + zerniken(self.lens.Zn[ii], R, TH) * self.lens.Cn[ii]
 
-        na = self.s.na
-        if na < 1:
-            W = W + self.lens.defocus / self.s.wavelength * (
-                torch.sqrt(1 - (na ** 2) * (R ** 2)) - 1
-            )
-        elif na >= 1:
-            # W = W + self.defocus/self.wavelength*\
-            #         (torch.sqrt(self.nLiquid**2-(self.na**2)*(R**2))-self.nLiquid)
-            W = W + (na ** 2) / (2 * self.s.wavelength) * \
-                self.lens.defocus * (R ** 2)
+        # na = self.s.na
+        # if na < 1:
+        #     W = W + self.lens.defocus / self.s.wavelength * (
+        #         torch.sqrt(1 - (na ** 2) * (R ** 2)) - 1
+        #     )
+        # elif na >= 1:
+        #     # W = W + self.defocus/self.wavelength*\
+        #     #         (torch.sqrt(self.nLiquid**2-(self.na**2)*(R**2))-self.nLiquid)
+        #     W = W + (na ** 2) / (2 * self.s.wavelength) * \
+        #         self.lens.defocus * (R ** 2)
+        #     # print(f"W: {W}")
         self.pupil_fdata = H * torch.exp(-1j * 2 * (torch.pi) * W)
+        # torch_arr_bound(self.pupil_fdata, "self.pupil_fdata")
 
     def calculate(self):
         normalized_period = self.x_gridnum / (self.s.wavelength/self.s.na)
@@ -93,7 +78,7 @@ class ICC:
                    self.x_gridnum // 2) / normalized_period
         mask_gm = (torch.arange(self.y1, self.y2) -
                    self.y_gridnum // 2) / normalized_period
-        mask_gm, mask_fm = torch.meshgrid(mask_fm, mask_gm, indexing='xy')
+        mask_fm, mask_gm = torch.meshgrid(mask_fm, mask_gm, indexing='xy')
 
         mask_fg2m = mask_fm.pow(2) + mask_gm.pow(2)
 
@@ -120,13 +105,16 @@ class ICC:
         intensity2D = torch.zeros(self.mask.fdata.shape, dtype=torch.float32)
         for i in range(self.s.simple_mdata.shape[0]):
             # print(i)
+            # torch_arr_bound(mask_fm, f"mask_fm[{i}]")
             rho2 = mask_fg2m + 2 * \
                 (sourceX[i] * mask_fm + sourceY[i] * mask_gm) + sourceXY2[i]
             valid_source_mask = rho2.le(1)
 
             # torch_arr_bound(valid_source_mask, f"valid_source_mask {i}")
             f_calc = torch.masked_select(mask_fm, valid_source_mask)
+            # torch_arr_bound(f_calc, f"f_calc[{i}]")
             g_calc = torch.masked_select(mask_gm, valid_source_mask)
+            # torch_arr_bound(g_calc, f"g_calc[{i}]")
             valid_mask_fdata = torch.masked_select(
                 self.mask.fdata[self.y1: self.y2, self.x1: self.x2], valid_source_mask)
 
@@ -137,9 +125,9 @@ class ICC:
 
             e_field = torch.zeros(
                 self.mask.fdata.shape,
-                dtype=torch.complex128)
+                dtype=torch.complex64)
 
-            ExyzFrequency = torch.zeros(rho2.shape, dtype=torch.complex128)
+            ExyzFrequency = torch.zeros(rho2.shape, dtype=torch.complex64)
             ExyzFrequency[valid_source_mask] = tempHAber
 
             e_field[self.y1: self.y2, self.x1: self.x2] = ExyzFrequency
@@ -150,7 +138,7 @@ class ICC:
             intensity2D += AA
 
         self.intensity2D = intensity2D / weight
-
+        self.RI = torch.where(self.intensity2D >= 0.225, 1, 0)
 
 """
 TODO:
@@ -159,10 +147,10 @@ TODO:
 3. Implement the SMO algorithm.
 """
 if __name__ == "__main__":
-    gds_max_x = 1024
-    gds_max_y = 1024
-    MASK_W = 2048
-    MASK_H = 2048
+    gds_max_x = 1000
+    gds_max_y = 1000
+    MASK_W = 1000
+    MASK_H = 1000
 
     source_w = 1280
     source_h = 1280
@@ -175,21 +163,21 @@ if __name__ == "__main__":
     s.na = 1.35
     s.maskxpitch = source_w
     s.maskypitch = source_h
-    s.sigma_out = 0.9
-    s.sigma_in = 0.6
+    s.sigma_out = 0.7
+    s.sigma_in = 0.5
     s.smooth_deta = 0
     s.shiftAngle = 0
     # s.update()
     # s.ifft()
     # print(s.data.size())
 
-    o = LensList()
-    o.maskxpitch = source_w
-    o.maskypitch = source_h
-    o.na = 1.35
-    o.focusList = [0.0]
-    o.focusCoef = [1.0]
-    # o.calculate()
+    # o = LensList()
+    # o.maskxpitch = source_w
+    # o.maskypitch = source_h
+    # o.na = 1.35
+    # o.focusList = [0.0]
+    # o.focusCoef = [1.0]
+    # # o.calculate()
 
     gds_path = "/home/gjchen21/phd/projects/smo/SMO-ICCAD23/data/NanGateLibGDS/NOR2_X2.gds"
     # img_path = "/home/gjchen21/phd/projects/smo/SMO-ICCAD23-torch/data/ibm_opc_test/mask/t1_0_mask.png"
@@ -200,15 +188,17 @@ if __name__ == "__main__":
     m.openGDS()
     m.maskfft()
 
-    icc = ICC(s, o, m)
+    icc = ICC(s, m)
     icc.calculate()
 
     torch_arr_bound(icc.intensity2D, "icc.intensity2D")
-    show_img(icc.intensity2D, "icc.intensity2D")
+    # show_img(icc.intensity2D, "icc.intensity2D")
     show_img(m.data, "m.data")
+    show_img(icc.RI, "icc.RI")
     # torch_arr_bound(icc.icc2d, "icc.icc2d")
     # show_img(icc.icc2d, "icc.icc2d")
     # torch_arr_bound(icc.jsource, "icc.jsource")
     # torch_arr_bound(icc.finalAI, "icc.finalAI")
     # show_img(icc.finalAI, "icc.finalAI")
     # jsource we have, jsource is real-number matrix.
+
