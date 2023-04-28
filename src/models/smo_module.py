@@ -1,7 +1,11 @@
 from typing import Any
 
+import aim
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+import torchvision.transforms as T
+from aim.sdk.adapters.pytorch_lightning import AimLogger
 from lightning import LightningModule
 from torchmetrics import MeanMetric
 
@@ -9,10 +13,10 @@ from src.models.litho.gds_mask import Mask
 from src.models.litho.source import Source
 from src.models.litho.utils import torch_arr_bound
 
-SOURCE_RELAX_SIGMOID_STEEPNESS = 6
-PHOTORISIST_SIGMOID_STEEPNESS = 40
-TARGET_INTENSITY = 0.21
-LOW_LIGHT_THRES = 1e-5
+SOURCE_RELAX_SIGMOID_STEEPNESS = 8
+PHOTORISIST_SIGMOID_STEEPNESS = 50
+TARGET_INTENSITY = 0.31
+LOW_LIGHT_THRES = 1e-3
 
 
 class SMOLitModule(LightningModule):
@@ -36,15 +40,17 @@ class SMOLitModule(LightningModule):
         mask: Mask,
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler,
+        source_acti: str = "cosine",
+        visual_in_val: bool = True,
     ):
         super().__init__()
 
         # this line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
-        self.save_hyperparameters(logger=False)
+        self.save_hyperparameters(logger=False, ignore=["source", "mask"])
 
         # loss function
-        self.criterion = torch.nn.CrossEntropyLoss()
+        self.criterion = nn.MSELoss()
 
         # source
         self.s = source
@@ -56,9 +62,10 @@ class SMOLitModule(LightningModule):
         self.mask.data = self.mask.data.to(torch.float32)
         # for averaging loss across batches
         self.train_loss = MeanMetric()
+        self.val_loss = MeanMetric()
 
         # activation
-        # self.sigmoid_source = nn.Sigmoid()
+        self.sigmoid_source = nn.Sigmoid()
 
         # init source params
         # hyper-parameters
@@ -95,16 +102,26 @@ class SMOLitModule(LightningModule):
         self.source_params = nn.Parameter(torch.zeros(self.s.data.shape))
 
         # for sigmoid
-        # self.source_params.data[torch.where(self.s.data > 0.5)] = 2
-        # self.source_params.data.sub_(1)
-
-        self.source_params.data[torch.where(self.s.data > 0.5)] = 0.1
-        self.source_params.data[torch.where(self.s.data <= 0.5)] = torch.pi
+        if self.hparams.source_acti == "sigmoid":
+            self.source_params.data[torch.where(self.s.data > 0.5)] = 2 - 0.2
+            self.source_params.data.sub_(0.9)
+        elif self.hparams.source_acti == "cosine":
+            self.source_params.data[torch.where(self.s.data > 0.5)] = 0.1
+            self.source_params.data[torch.where(self.s.data <= 0.5)] = torch.pi - 0.1
+        else:
+            # default cosine
+            self.source_params.data[torch.where(self.s.data > 0.5)] = 0.1
+            self.source_params.data[torch.where(self.s.data <= 0.5)] = torch.pi - 0.1
 
     def update_source_value(self):
-        # self.source_value = self.sigmoid_source(
-        #     SOURCE_RELAX_SIGMOID_STEEPNESS * self.source_params)
-        self.source_value = (1 + torch.cos(self.source_params)) / 2
+        if self.hparams.source_acti == "cosine":
+            self.source_value = (1 + torch.cos(self.source_params)) / 2
+        elif self.hparams.source_acti == "sigmoid":
+            self.source_value = self.sigmoid_source(
+                SOURCE_RELAX_SIGMOID_STEEPNESS * self.source_params
+            )
+        else:
+            self.source_value = (1 + torch.cos(self.source_params)) / 2
 
     def get_valid_source(self):
         fx = self.s.fx
@@ -145,8 +162,8 @@ class SMOLitModule(LightningModule):
         self.get_valid_source()
         intensity2D = torch.zeros(self.mask.data.shape, dtype=torch.float32)
 
+        print(f"total source number: {self.simple_source_value.shape[0]}")
         for i in range(self.simple_source_value.shape[0]):
-            # print(i)
             rho2 = (
                 self.mask_fg2m
                 + 2
@@ -183,23 +200,41 @@ class SMOLitModule(LightningModule):
 
         return self.intensity2D, self.RI
 
-    def model_step(self, batch: Any):
+    def model_step(self):
         AI, RI = self.forward()
         loss = self.criterion(RI, self.mask.data)
         return loss, AI, RI
 
     def training_step(self, batch: Any, batch_idx: int):
-        loss, AI, RI = self.model_step(batch)
+        loss, _, _ = self.model_step()
 
         # update and log metrics
-        print(loss)
         self.train_loss(loss)
-        self.log("train/loss", self.train_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log(
+            "train/loss", self.train_loss, on_step=False, on_epoch=True, prog_bar=True, logger=True
+        )
         # return loss or backpropagation will fail
-        return loss
+        return {"loss": loss}
 
-    def on_train_epoch_end(self):
-        pass
+    def validation_step(self, batch: Any, batch_idx: int):
+        loss, AI, RI = self.model_step()
+        self.val_loss(loss)
+        self.log(
+            "val/loss", self.val_loss, on_step=False, on_epoch=True, prog_bar=False, logger=True
+        )
+
+        # for aim logger
+        if self.hparams.visual_in_val:
+            if self.global_rank == 0:
+                if isinstance(self.logger, AimLogger):
+                    transform = T.ToPILImage()
+                    aim_images = [
+                        aim.Image(transform(i))
+                        for i in [AI, RI, self.source_value.clone().detach()]
+                    ]
+                    self.logger.experiment.track(
+                        value=aim_images, name=f"AI and RI in epoch {self.current_epoch}"
+                    )
 
     def configure_optimizers(self):
         """Choose what optimizers and learning-rate schedulers to use in your optimization.

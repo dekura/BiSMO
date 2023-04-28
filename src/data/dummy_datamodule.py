@@ -2,13 +2,12 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-04-27 22:53:54
-LastEditTime: 2023-04-28 02:52:43
+LastEditTime: 2023-04-28 21:40:25
 Contact: cgjcuhk@gmail.com
 Description: debug datasets
 """
 
 from lightning import LightningDataModule
-from lightning.pytorch.utilities.types import TRAIN_DATALOADERS
 from pl_bolts.datasets import DummyDataset
 from torch.utils.data import DataLoader
 
@@ -22,7 +21,16 @@ class DummyDataModule(LightningDataModule):
         self.save_hyperparameters(logger=False)
         self.data_train = DummyDataset((1, 28, 28), (1,), num_samples=1)
 
-    def train_dataloader(self) -> TRAIN_DATALOADERS:
+    def train_dataloader(self):
+        return DataLoader(
+            dataset=self.data_train,
+            batch_size=self.hparams.batch_size,
+            num_workers=self.hparams.num_workers,
+            pin_memory=self.hparams.pin_memory,
+            shuffle=False,
+        )
+
+    def val_dataloader(self):
         return DataLoader(
             dataset=self.data_train,
             batch_size=self.hparams.batch_size,

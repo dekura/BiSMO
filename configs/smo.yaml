@@ -9,8 +9,8 @@ defaults:
   - data: dummy.yaml
   - model: smo.yaml
   - callbacks: default.yaml
-  - logger: null
-  - trainer: default.yaml
+  - logger: aim.yaml
+  - trainer: smo.yaml
   - paths: default.yaml
   - extras: default.yaml
   - hydra: default.yaml

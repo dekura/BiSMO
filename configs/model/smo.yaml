@@ -3,7 +3,7 @@ _target_: src.models.smo_module.SMOLitModule
 optimizer:
   _target_: torch.optim.Adam
   _partial_: true
-  lr: 1
+  lr: 0.1
   weight_decay: 0.0
 
 scheduler:
@@ -12,6 +12,9 @@ scheduler:
   mode: min
   factor: 0.1
   patience: 20
+
+# choose from cosine | sigmoid
+source_acti: sigmoid
 # optimizer:
 #   _target_: torch.optim.Adam
 #   _partial_: true
