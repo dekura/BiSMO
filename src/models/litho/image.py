@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 
-from src.models.litho.mask import Mask
+from src.models.litho.gds_mask import Mask
 from src.models.litho.tcc import TCCList
 
 
@@ -25,18 +25,18 @@ class ImageHopkins:
         self.y2 = int(self.mask.y_gridnum // 2 + self.tcc.s.gnum + 1)
 
         self.spat_part = torch.zeros(
-            (self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex128
+            (self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex64
         )
         self.freq_part = torch.zeros(
-            (self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex128
+            (self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex64
         )
 
     def calAIold(self):  # much faster than calAIold(), however some bugs here.
         AI_freq_dense = torch.zeros(
-            (self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex128
+            (self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex64
         )
         AI_freq_sparse = torch.zeros(
-            (int(self.y2 - self.y1), int(self.x2 - self.x1)), dtype=torch.complex128
+            (int(self.y2 - self.y1), int(self.x2 - self.x1)), dtype=torch.complex64
         )
         for ii in range(self.order):
             self.x1 = int(self.x1)
@@ -67,7 +67,7 @@ class ImageHopkins:
         AI = torch.zeros((self.mask.y_gridnum, self.mask.x_gridnum))
         for ii in range(self.order):
             e_field = torch.zeros(
-                (self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex128
+                (self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex64
             )
             e_field[self.y1 : self.y2, self.x1 : self.x2] = (
                 self.kernels[:, :, ii] * self.mask.fdata[self.y1 : self.y2, self.x1 : self.x2]
@@ -107,10 +107,10 @@ class ImageHopkinsList(ImageHopkins):
         self.y2 = self.mask.y_gridnum // 2 + self.tcc.s.gnum + 1
 
         self.spat_part = torch.zeros(
-            (self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex128
+            (self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex64
         )
         self.freq_part = torch.zeros(
-            (self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex128
+            (self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex64
         )
 
     def calculate(self):
@@ -129,8 +129,9 @@ class ImageHopkinsList(ImageHopkins):
 
 
 if __name__ == "__main__":
-    from mask import Mask
     from source import Source
+
+    from src.models.litho.gds_mask import Mask
 
     mp = [
         [

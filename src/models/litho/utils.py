@@ -2,14 +2,15 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2022-10-17 11:50:53
-LastEditTime: 2023-04-06 11:26:06
+LastEditTime: 2023-04-28 01:15:19
 Contact: cgjcuhk@gmail.com
 Description: some utils for image loading.
 """
 from pathlib import Path
-import torch
+
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
 from PIL import Image
 from rich import print as rprint
 
@@ -24,7 +25,6 @@ def save_img_from_01np(np_arr, file_path):
     img.save(f"{file_path}")
 
 
-
 def save_img_from_01torch(torch_arr, file_path):
     img = (torch_arr.cpu().numpy() * 255).astype(np.uint8)
     img = Image.fromarray(img)
@@ -33,7 +33,6 @@ def save_img_from_01torch(torch_arr, file_path):
     if not Path(file_path).parent.exists():
         Path(file_path).parent.mkdir(parents=True)
     img.save(f"{file_path}")
-
 
 
 def show_img(arr, name):
@@ -49,9 +48,13 @@ def arr_bound(arr, name):
     min_wh = 7
     if arr.shape[0] >= min_wh and len(list(arr.shape)) > 1:
         lefti = arr.shape[0] // 2 - 4
-        rprint(f"\n*************[yellow]{name}[{lefti}:{lefti+min_wh},{lefti}:{lefti+min_wh}][/yellow]*************")
-        rprint(arr[lefti:lefti+min_wh,lefti:lefti+min_wh])
-        rprint(f"*************[yellow]{name}[{lefti}:{lefti+7},{lefti}:{lefti+7}][/yellow]*************\n")
+        rprint(
+            f"\n*************[yellow]{name}[{lefti}:{lefti+min_wh},{lefti}:{lefti+min_wh}][/yellow]*************"
+        )
+        rprint(arr[lefti : lefti + min_wh, lefti : lefti + min_wh])
+        rprint(
+            f"*************[yellow]{name}[{lefti}:{lefti+7},{lefti}:{lefti+7}][/yellow]*************\n"
+        )
     else:
         rprint(arr)
     rprint(f"[yellow]{name}[/yellow].shape: {arr.shape}")
@@ -76,15 +79,19 @@ def torch_arr_bound(arr, name):
     min_wh = 7
     if arr.shape[0] >= min_wh and len(list(arr.shape)) > 1:
         lefti = arr.shape[0] // 2 - 4
-        rprint(f"\n*************[yellow]{name}[{lefti}:{lefti+min_wh},{lefti}:{lefti+min_wh}][/yellow]*************")
-        rprint(arr[lefti:lefti+min_wh,lefti:lefti+min_wh])
-        rprint(f"*************[yellow]{name}[{lefti}:{lefti+7},{lefti}:{lefti+7}][/yellow]*************\n")
+        rprint(
+            f"\n*************[yellow]{name}[{lefti}:{lefti+min_wh},{lefti}:{lefti+min_wh}][/yellow]*************"
+        )
+        rprint(arr[lefti : lefti + min_wh, lefti : lefti + min_wh])
+        rprint(
+            f"*************[yellow]{name}[{lefti}:{lefti+7},{lefti}:{lefti+7}][/yellow]*************\n"
+        )
     else:
         rprint(arr)
     rprint(f"[yellow]{name}[/yellow].shape: {arr.shape}")
     rprint(f"[yellow]{name}[/yellow].dtype: {arr.dtype}")
     rprint(f"[yellow]{name}[/yellow] [red]sum[/red]: {torch.sum(arr)}")
-    if arr.dtype == torch.complex128:
+    if arr.dtype == torch.complex128 or arr.dtype == torch.complex64:
         rprint(f"[yellow]{name}.real[/yellow] sum: {torch.sum(arr.real)}")
         rprint(f"[yellow]{name}.imag[/yellow] sum: {torch.sum(arr.imag)}")
         rprint(f"[yellow]{name}.real[/yellow] max: {torch.max(arr.real)}")
@@ -104,7 +111,7 @@ def delta_np_torch(arr: np.array, tarr: torch.tensor):
 
 
 def plot(ndarray):
-    """plots Transversed image, with origin (0,0) at the lower left corner"""
+    """Plots Transversed image, with origin (0,0) at the lower left corner."""
     import matplotlib.pyplot as plt
 
     plt.imshow(ndarray.T, origin="lower")

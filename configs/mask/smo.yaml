@@ -1,0 +1,7 @@
+defaults:
+  - default.yaml
+
+xmax: 1000
+ymax: 1000
+maskxpitch: 1000
+maskypitch: 1000

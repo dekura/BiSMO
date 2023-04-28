@@ -1,5 +1,4 @@
-"""
-"""
+""""""
 
 import copy
 import math
@@ -12,7 +11,7 @@ from src.models.litho.image import ImageHopkins, ImageHopkinsList
 
 
 class ILT:
-    """inverse litho
+    """Inverse litho.
 
     .. plot::
       :include-source:
@@ -73,7 +72,6 @@ class ILT:
         plt.figure()
         plt.imshow(i.maskdata > 0.9, origin='lower')
         plt.show()
-
     """
 
     def __init__(self, m, t):
@@ -114,8 +112,8 @@ class ILT:
     def mask_init(self):
         x = np.linspace(-10, 10, 21)
         X, Y = np.meshgrid(x, x)
-        R = X ** 2 + Y ** 2
-        field = np.exp(-R / 2 / (4 ** 2))
+        R = X**2 + Y**2
+        field = np.exp(-R / 2 / (4**2))
         OO = field / np.sum(field)
         D = sg.fftconvolve(1.0 * self.image.mask.data + 0.0, OO, "same")
         # D = pyfftw.interfaces.scipy_fftpack.convolve(1.0*self.image.mask.data+0.0, OO,'same')
@@ -172,11 +170,7 @@ class ILT:
         self.regGrad = (
             -(1 - 2 * self.maskdata)
             * np.sin(self.masktheta)
-            * (
-                self.image.mask.x_gridsize
-                * self.image.mask.y_gridsize
-                / self.image.mask.perimeter
-            )
+            * (self.image.mask.x_gridsize * self.image.mask.y_gridsize / self.image.mask.perimeter)
         )
         # self.regError.append(self.reg)
         # pass
@@ -206,9 +200,7 @@ class ILT:
         norm = np.sum(index)
         a[index] = 0.2 * self.error[ii] / (norm) / deta[index]
         if norm > 0:
-            newTheta[index] = (
-                self.masktheta[index] - 0.2 * self.error[ii] / (norm) / deta[index]
-            )
+            newTheta[index] = self.masktheta[index] - 0.2 * self.error[ii] / (norm) / deta[index]
             index0 = newTheta > math.pi
             newTheta[index0] = 2 * math.pi - newTheta[index0]
             index1 = newTheta < 0
@@ -260,9 +252,7 @@ class ILT:
 
     def costfunction(self):
         a = np.sum((self.image.RI - self.target) ** 2) * (
-            self.image.mask.x_gridsize
-            * self.image.mask.y_gridsize
-            / self.image.mask.perimeter
+            self.image.mask.x_gridsize * self.image.mask.y_gridsize / self.image.mask.perimeter
         )
         self.error.append(a)
 
@@ -287,9 +277,7 @@ class RobustILT(ILT):
             for jj in range(lengthD):
                 self.image.RI = self.image.RIList[ii][jj]
                 self.calGrad()
-                self.robustGrad += (
-                    self.image.doseCoef[jj] * self.image.focusCoef[ii] * self.grad
-                )
+                self.robustGrad += self.image.doseCoef[jj] * self.image.focusCoef[ii] * self.grad
         self.grad = self.robustGrad
 
     def robustCostFunction(self):
@@ -317,24 +305,17 @@ class RobustILT(ILT):
             self.calRobustGrad()
             self.calRegTerm()
             self.updateThetaConstSize()
-            print(
-                "Interation index: %d, Costfunction value: %4f."
-                % (
-                    ii,
-                    self.error[ii],
-                )
-            )
+            print(f"Iteration index: {ii}, Costfunction value: {self.error[ii]:4f}.")
 
 
 if __name__ == "__main__":
-
     import time
 
     from litho.config import PATH
     from litho.lens import LensList
-    from litho.mask import Mask
     from litho.source import Source
     from litho.tcc import TCCList
+    from src.models.litho.gds_mask import Mask
 
     a = time.time()
     m = Mask()

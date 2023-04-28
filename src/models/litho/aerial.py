@@ -10,8 +10,8 @@ Description:  use litho model to get the aerial image.
 from typing import Any
 
 from src.models.litho.config import PATH
+from src.models.litho.gds_mask import Mask
 from src.models.litho.image import ImageHopkins, ImageHopkinsList
-from src.models.litho.mask import Mask
 from src.models.litho.tcc import TCCDB, TCCList
 from src.models.litho.utils import save_img_from_01torch, show_img, torch_arr_bound
 

@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-03-29 15:45:14
-LastEditTime: 2023-04-06 17:37:09
+LastEditTime: 2023-04-27 23:35:07
 Contact: cgjcuhk@gmail.com
 
 
@@ -55,12 +55,6 @@ class Source:
         self.shiftAngle = shiftAngle
         self.openAngle = openAngle
         self.type = source_type
-
-        """
-        Process calculation
-        """
-        self.update()
-        self.ifft()
 
     def update(self):
         self.detaf = self.wavelength / (self.maskxpitch * self.na)

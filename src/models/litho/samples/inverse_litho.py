@@ -1,4 +1,4 @@
-""" inverse litho
+"""Inverse litho.
 
 calculate needed mask to account for litho effects
 """
@@ -10,9 +10,9 @@ import matplotlib.pyplot as plt
 from litho.config import PATH
 from litho.ilt import RobustILT
 from litho.lens import LensList
-from litho.mask import Mask
 from litho.source import Source
 from litho.tcc import TCCList
+from src.models.litho.gds_mask import Mask
 
 if __name__ == "__main__":
     m = Mask()

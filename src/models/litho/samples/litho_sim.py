@@ -1,4 +1,4 @@
-""" litho sim
+"""Litho sim.
 
 calculates litho effects
 """
@@ -6,10 +6,10 @@ calculates litho effects
 import matplotlib.pyplot as plt
 
 from litho.config import PATH
-from litho.mask import Mask
+from src.models.litho.gds_mask import Mask
 
 if __name__ == "__main__":
-    """polygon 2 mask"""
+    """Polygon 2 mask."""
     # mp = [ [[-1,6],[-1, 2],[1, 2],[1, 1],[6, 1],[6, 0],[0, 0],[0, 1],[-2, 1],[-2, 6],[-1, 6]], \
     #   [[6, -1],[6, -2],[1, -2],[1, -3],[4, -3],[4, -6],[3, -6],[3, -4],[0, -4],[0, -1],[6, -1]] ]
     # m = Mask()

@@ -1,9 +1,9 @@
-_target_: src.models.litho.mask.Mask
-gds_path: ${paths.data_dir}/NanGateLibGDS/NOR2_X2.gds
+_target_: src.models.litho.gds_mask.Mask
+layout_path: ${paths.data_dir}/NanGateLibGDS/NOR2_X2.gds
 layername: 11
-pixels_per_um: 100
+pixels_per_um: 1000
 xmax: 1024
 ymax: 1024
-x_gridsize: 1
-y_gridsize: 1
+maskxpitch: 2048
+maskypitch: 2048
 CD: 45

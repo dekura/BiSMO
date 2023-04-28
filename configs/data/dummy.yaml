@@ -1,0 +1,4 @@
+_target_: src.data.dummy_datamodule.DummyDataModule
+batch_size: 1
+num_workers: 0
+pin_memory: False

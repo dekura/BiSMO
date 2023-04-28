@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-03-31 10:08:59
-LastEditTime: 2023-04-06 19:27:10
+LastEditTime: 2023-04-27 23:36:57
 Contact: cgjcuhk@gmail.com
 Description:
 
@@ -54,7 +54,7 @@ class TCC:
 
     def calMutualIntensity(self):
         self.gnum, self.fnum = self.s.data.shape
-        J = torch.zeros((self.gnum, self.fnum, self.gnum, self.fnum), dtype=torch.complex128)
+        J = torch.zeros((self.gnum, self.fnum, self.gnum, self.fnum), dtype=torch.complex64)
         for ii in range(self.gnum):
             for jj in range(self.fnum):
                 J[:, :, ii, jj] = self.s.spatMutualData.real[
@@ -69,11 +69,11 @@ class TCC:
 
     def svd(self):
         self.spat_part = torch.zeros(
-            (self.gnum, self.fnum, self.gnum, self.fnum), dtype=torch.complex128
+            (self.gnum, self.fnum, self.gnum, self.fnum), dtype=torch.complex64
         )
 
         self.freq_part = torch.zeros(
-            (self.gnum, self.fnum, self.gnum, self.fnum), dtype=torch.complex128
+            (self.gnum, self.fnum, self.gnum, self.fnum), dtype=torch.complex64
         )
 
         tcc4d = self.tcc2d.reshape((self.gnum, self.fnum, self.gnum, self.fnum))
@@ -90,7 +90,7 @@ class TCC:
         log.info(f"sci.sparse.linalg.svds taking {(time.time() - tic):.3f} seconds")
 
         self.coefs = S[0 : self.order]
-        self.kernels = torch.zeros((self.gnum, self.fnum, self.order), dtype=torch.complex128)
+        self.kernels = torch.zeros((self.gnum, self.fnum, self.order), dtype=torch.complex64)
         for ii in range(self.order):
             self.kernels[:, :, ii] = torch.reshape(U[:, ii], (self.gnum, self.fnum))
 
@@ -98,6 +98,11 @@ class TCC:
 class TCCList(TCC):
     def __init__(self, source: Source, lensList: LensList, order: int = 7):
         self.s = source
+        self.s.update()
+        self.s.ifft()
+
+        self.lensList = lensList
+        self.lensList.calculate()
         self.PSFList = lensList.sDataList
         self.order = order
         self.focusList = lensList.focusList

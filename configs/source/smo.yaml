@@ -1,0 +1,7 @@
+defaults:
+  - default.yaml
+
+# conventional , annular, quasar, dipole
+source_type: annular
+maskxpitch: 1000
+maskypitch: 1000
