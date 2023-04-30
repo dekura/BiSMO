@@ -92,7 +92,7 @@ if __name__ == "__main__":
     m.x_gridsize = 1
     m.y_gridsize = 1
     m_path = "NOR2_X2.gds"
-    m.openGDS(PATH.gdsdir / m_path, 11, 0.1, pixels_per_um=100)
+    m.open_layout(PATH.gdsdir / m_path, 11, 0.1, pixels_per_um=100)
     # arr_bound(m.data, "mask.data")
     # this line is required to initialize the mask.
     m.maskfft()

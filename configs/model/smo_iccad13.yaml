@@ -22,3 +22,5 @@ lens_n_liquid: 1.44
 lens_reduction: 0.25
 
 target_intensity: 0.225
+
+save_img_folder: ${paths.data_dir}/soed

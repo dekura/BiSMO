@@ -1,0 +1,4 @@
+_target_: src.models.litho.img_mask.Mask
+dataset_name: ibm_opc_test
+layout_path: /home/gjchen21/projects/smo/SMO-torch/data/ibm_opc_test/mask/t1_0_mask.png
+target_path: /home/gjchen21/projects/smo/SMO-torch/data/ibm_opc_test/mask/t1_0_mask.png

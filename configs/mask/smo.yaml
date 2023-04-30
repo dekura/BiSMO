@@ -3,5 +3,5 @@ defaults:
 
 xmax: 1000
 ymax: 1000
-maskxpitch: 1000
-maskypitch: 1000
+maskxpitch: 2000
+maskypitch: 2000

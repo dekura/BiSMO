@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-04-27 22:53:54
-LastEditTime: 2023-04-28 21:40:25
+LastEditTime: 2023-05-01 01:17:42
 Contact: cgjcuhk@gmail.com
 Description: debug datasets
 """
@@ -31,6 +31,15 @@ class DummyDataModule(LightningDataModule):
         )
 
     def val_dataloader(self):
+        return DataLoader(
+            dataset=self.data_train,
+            batch_size=self.hparams.batch_size,
+            num_workers=self.hparams.num_workers,
+            pin_memory=self.hparams.pin_memory,
+            shuffle=False,
+        )
+
+    def test_dataloader(self):
         return DataLoader(
             dataset=self.data_train,
             batch_size=self.hparams.batch_size,

@@ -1,3 +1,11 @@
+"""
+Author: Guojin Chen @ CUHK-CSE
+Homepage: https://gjchen.me
+Date: 2023-04-02 14:39:16
+LastEditTime: 2023-04-30 20:19:44
+Contact: cgjcuhk@gmail.com
+Description:
+"""
 from lightning.pytorch.utilities import rank_zero_only
 
 from src.utils import pylogger
@@ -44,6 +52,9 @@ def log_hyperparameters(object_dict: dict) -> None:
     hparams["tags"] = cfg.get("tags")
     hparams["ckpt_path"] = cfg.get("ckpt_path")
     hparams["seed"] = cfg.get("seed")
+
+    hparams["source"] = cfg.get("source")
+    hparams["mask"] = cfg.get("mask")
 
     # send hparams to all loggers
     for logger in trainer.loggers:

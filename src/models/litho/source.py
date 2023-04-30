@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-03-29 15:45:14
-LastEditTime: 2023-04-27 23:35:07
+LastEditTime: 2023-04-30 16:08:32
 Contact: cgjcuhk@gmail.com
 
 
@@ -22,7 +22,7 @@ def Edeta(deta, x):
         g = 0.5 * (1 + erf(x / deta))
         return g
     else:
-        g = torch.zeros(x.shape, dtype=torch.float64)
+        g = torch.zeros(x.shape, dtype=torch.float32)
         g[x >= 0] = 1
         return g
 
@@ -59,8 +59,8 @@ class Source:
     def update(self):
         self.detaf = self.wavelength / (self.maskxpitch * self.na)
         self.detag = self.wavelength / (self.maskypitch * self.na)
-        self.fnum = int(torch.ceil(torch.tensor(2 / self.detaf, dtype=torch.float64)))
-        self.gnum = int(torch.ceil(torch.tensor(2 / self.detag, dtype=torch.float64)))
+        self.fnum = int(torch.ceil(torch.tensor(2 / self.detaf, dtype=torch.float32)))
+        self.gnum = int(torch.ceil(torch.tensor(2 / self.detag, dtype=torch.float32)))
 
         fx = torch.linspace(-self.fnum * self.detaf, self.fnum * self.detaf, 2 * self.fnum + 1)
         fy = torch.linspace(-self.gnum * self.detag, self.gnum * self.detag, 2 * self.gnum + 1)

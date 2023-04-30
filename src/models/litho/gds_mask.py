@@ -76,31 +76,7 @@ class Mask:
         # self.openGDS()
         # self.maskfft()
 
-    def poly2mask(self):
-        """Get Pixel-based Mask Image from Polygon Data The Poylgon Data Form are sensitive Similar
-        to poly2mask in Matlab."""
-        self.x_gridnum = int((self.x_range[1] - self.x_range[0]) / self.x_gridsize)
-        self.y_gridnum = int((self.y_range[1] - self.y_range[0]) / self.y_gridsize)
-        img = Image.new("L", (self.x_gridnum, self.y_gridnum), 0)
-
-        self.perimeter = 0.0
-        for ii in self.polygons:
-            pp = np.array(ii) * self.CD  # polygon
-            polygonlen = len(pp)
-            self.perimeter += np.sum(np.abs(pp[0:-1] - pp[1:polygonlen]))
-            pp[:, 0] = (pp[:, 0] - self.x_range[0]) / self.x_gridsize
-            pp[:, 1] = (pp[:, 1] - self.y_range[0]) / self.y_gridsize
-            vetex_list = list(pp)
-            polygon = [tuple(y) for y in vetex_list]
-            ImageDraw.Draw(img).polygon(polygon, outline=1, fill=1)
-
-        self.data = torch.from_numpy(np.array(img))
-        # self.data = np.float64(self.data)
-        self.spat_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex64)
-
-        self.freq_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex64)
-
-    def openGDS(self):
+    def open_layout(self):
         gdsdir = self.layout_path
         layername = self.layername
         pixels_per_um = self.pixels_per_um
@@ -186,16 +162,8 @@ class Mask:
 
         self.data = self.mask_groups[0]
         # Fourier transform pair, pyfftw syntax
-        self.spat_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex64)
-        self.freq_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex64)
 
-    # use the fftw packages
     def maskfft(self):
-        self.spat_part[:] = torch.fft.ifftshift(self.data)
-        self.freq_part = torch.fft.fftn(self.spat_part)
-        self.fdata = torch.fft.fftshift(self.freq_part)
-
-    def maskfftold(self):
         self.fdata = torch.fft.fftshift(torch.fft.fft2(torch.fft.ifftshift(self.data)))
 
     def smooth(self):
@@ -205,8 +173,5 @@ class Mask:
         # change G to 4-D to use F.conv2d
         G = torch.exp(-10 * R)
         G = G.view(1, 1, *G.shape)
-        # print(G.shape)
-        # print(self.data.shape)
         D = F.conv2d(0.9 * self.data.unsqueeze(0) + 0.05, G, padding="same") / torch.sum(G)
-        self.sdata = D.squeeze().to(torch.float64)
-        # print(self.sdata.shape)
+        self.sdata = D.squeeze().to(torch.float32)

@@ -4,11 +4,11 @@
 # order of defaults determines the order in which configs override each other
 defaults:
   - _self_
-  - source: smo.yaml
-  - mask: default.yaml
+  - source: iccad13.yaml
+  - mask: img_mask.yaml
   - data: dummy.yaml
-  - model: smo.yaml
-  - callbacks: default.yaml
+  - model: smo_iccad13.yaml
+  - callbacks: iccad13.yaml
   - logger: aim.yaml
   - trainer: smo.yaml
   - paths: default.yaml
@@ -37,3 +37,5 @@ smo: True
 ckpt_path: null
 
 seed: null
+
+inference: True

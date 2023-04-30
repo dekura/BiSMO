@@ -80,7 +80,7 @@ class ImageHopkins:
     # self.RI = 1 / (1 + torch.exp(-self.resist_a * (self.AI - self.resist_t)))
 
     def calRI(self):
-        self.RI = (self.AI >= self.resist_t).to(torch.float64)
+        self.RI = (self.AI >= self.resist_t).to(torch.float32)
 
 
 class ImageHopkinsList(ImageHopkins):
