@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2022-10-17 11:50:53
-LastEditTime: 2023-04-28 01:13:10
+LastEditTime: 2023-05-01 01:14:19
 Contact: cgjcuhk@gmail.com
 Description: some utils for image loading.
 """
@@ -68,7 +68,8 @@ def torch_arr_bound(arr, name):
         rprint(arr[lefti:lefti+min_wh,lefti:lefti+min_wh])
         rprint(f"*************[yellow]{name}[{lefti}:{lefti+7},{lefti}:{lefti+7}][/yellow]*************\n")
     else:
-        rprint(arr)
+        lefti = arr.shape[0] // 2 - 4
+        rprint(arr[lefti:lefti+min_wh])
     rprint(f"[yellow]{name}[/yellow].shape: {arr.shape}")
     rprint(f"[yellow]{name}[/yellow].dtype: {arr.dtype}")
     rprint(f"[yellow]{name}[/yellow] [red]sum[/red]: {torch.sum(arr)}")

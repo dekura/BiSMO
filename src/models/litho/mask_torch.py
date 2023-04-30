@@ -99,9 +99,7 @@ class Mask:
 
         self.data = torch.from_numpy(np.array(img))
         # self.data = np.float64(self.data)
-        self.spat_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex64)
 
-        self.freq_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex64)
 
     def openGDS(self):
         gdsdir = self.layout_path
@@ -188,27 +186,15 @@ class Mask:
             self.mask_groups.append(torch.from_numpy(np.array(img)))
 
         self.data = self.mask_groups[0]
-        # Fourier transform pair, pyfftw syntax
-        self.spat_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex64)
-        self.freq_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex64)
 
     def open_img(self):
         img = Image.open(self.layout_path)
         img = img.convert("L")
-        self.mask_groups.append(torch.from_numpy(np.array(img)))
+        self.mask_groups.append(torch.from_numpy(np.array(img) // 255))
         self.data = self.mask_groups[0]
         # Fourier transform pair, pyfftw syntax
-        self.spat_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex64)
-        self.freq_part = torch.zeros((self.y_gridnum, self.x_gridnum), dtype=torch.complex64)
 
-
-    # use the fftw packages
     def maskfft(self):
-        self.spat_part[:] = torch.fft.ifftshift(self.data)
-        self.freq_part = torch.fft.fftn(self.spat_part)
-        self.fdata = torch.fft.fftshift(self.freq_part)
-
-    def maskfftold(self):
         self.fdata = torch.fft.fftshift(torch.fft.fft2(torch.fft.ifftshift(self.data)))
 
     def smooth(self):
@@ -221,5 +207,15 @@ class Mask:
         # print(G.shape)
         # print(self.data.shape)
         D = F.conv2d(0.9 * self.data.unsqueeze(0) + 0.05, G, padding="same") / torch.sum(G)
-        self.sdata = D.squeeze().to(torch.float64)
+        self.sdata = D.squeeze().to(torch.float32)
         # print(self.sdata.shape)
+
+
+
+if __name__ == "__main__":
+    png_path = "/home/gjchen21/phd/projects/smo/SMO-ICCAD23-torch/data/ibm_opc_test/mask/t1_0_mask.png"
+    m = Mask(layout_path=png_path, layername=11)
+    m.open_img()
+
+    from utils import torch_arr_bound
+    torch_arr_bound(m.data, "m.data")

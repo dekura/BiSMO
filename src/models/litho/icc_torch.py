@@ -46,46 +46,34 @@ class ICC:
 
 
     def calPupil(self, FX, FY):
-        R = torch.sqrt(FX ** 2 + FY ** 2)
-        # TH = torch.arctan2(FY, FX)
-        # H = copy.deepcopy(R)
-        H = R.detach().clone()
-        H = torch.where(H > 1.0, 0.0, 1.0)
-        R[R > 1.0] = 0.0
+        R = torch.sqrt(FX ** 2 + FY ** 2) # rho
+        fgSquare = torch.square(R)
+        # try without M
+        NA = self.s.na
+        indexImage = 1.44
+        M = 0.25
 
-        W = torch.zeros(R.shape, dtype=torch.complex64)
+        obliquityFactor = torch.sqrt(torch.sqrt((1 - (M**2 * NA**2) * fgSquare) / (1 - ((NA/indexImage)**2) * fgSquare)))
+        # torch_arr_bound(obliquityFactor, "obliquityFactor")
 
-        # for ii in range(len(self.lens.Zn)):
-        #     W = W + zerniken(self.lens.Zn[ii], R, TH) * self.lens.Cn[ii]
-
-        # na = self.s.na
-        # if na < 1:
-        #     W = W + self.lens.defocus / self.s.wavelength * (
-        #         torch.sqrt(1 - (na ** 2) * (R ** 2)) - 1
-        #     )
-        # elif na >= 1:
-        #     # W = W + self.defocus/self.wavelength*\
-        #     #         (torch.sqrt(self.nLiquid**2-(self.na**2)*(R**2))-self.nLiquid)
-        #     W = W + (na ** 2) / (2 * self.s.wavelength) * \
-        #         self.lens.defocus * (R ** 2)
-        #     # print(f"W: {W}")
-        self.pupil_fdata = H * torch.exp(-1j * 2 * (torch.pi) * W)
-        # torch_arr_bound(self.pupil_fdata, "self.pupil_fdata")
+        # self.pupil_fdata = obliquityFactor * torch.exp(-1j * 2 * (torch.pi) * W)
+        self.pupil_fdata = obliquityFactor * (1+0j)
+        return obliquityFactor * (1+0j)
 
     def calculate(self):
-        normalized_period = self.x_gridnum / (self.s.wavelength/self.s.na)
+        normalized_period_x = self.x_gridnum / (self.s.wavelength/self.s.na)
+        normalized_period_y = self.y_gridnum / (self.s.wavelength/self.s.na)
         mask_fm = (torch.arange(self.x1, self.x2) -
-                   self.x_gridnum // 2) / normalized_period
+                   self.x_gridnum // 2) / normalized_period_x
         mask_gm = (torch.arange(self.y1, self.y2) -
-                   self.y_gridnum // 2) / normalized_period
+                   self.y_gridnum // 2) / normalized_period_y
         mask_fm, mask_gm = torch.meshgrid(mask_fm, mask_gm, indexing='xy')
 
         mask_fg2m = mask_fm.pow(2) + mask_gm.pow(2)
 
         total_source = self.s.simple_mdata.shape[0]
-
         # total_source = 20
-        print(f"totol source number : {total_source}")
+        # print(f"totol source number : {total_source}")
         self.s.simple_mdata = self.s.simple_mdata[:total_source]
         self.s.simple_fx = self.s.simple_fx[:total_source]
         self.s.simple_fy = self.s.simple_fy[:total_source]
@@ -93,15 +81,34 @@ class ICC:
         sourceX = self.s.simple_fx
         sourceY = self.s.simple_fy
         sourceXY2 = sourceX.pow(2) + sourceY.pow(2)
-
+        weight = torch.sum(self.s.simple_mdata)
         # too large to direct use
         # intensity2D = torch.zeros((
         #     self.mask.fdata.shape[0],
         #     self.mask.fdata.shape[1],
         #     self.s.simple_mdata.shape[0]
         # ), dtype=torch.float32)
+        indexImage = 1.44
+        norm_pupil_fdata = self.calPupil(sourceX, sourceY)
+        norm_spectrum_calc = normalized_period_x * normalized_period_y
+        # print(f"norm_spectrum_calc : {norm_spectrum_calc}")
+        dfmdg = 1 / (normalized_period_x * normalized_period_y)
 
-        weight = torch.sum(self.s.simple_mdata)
+        norm_tempHAber = norm_spectrum_calc * norm_pupil_fdata
+        norm_ExyzFrequency = norm_tempHAber.view(-1, 1)
+        norm_Exyz = torch.fft.fftshift(torch.fft.fft(norm_ExyzFrequency))
+        norm_IntensityCon = torch.abs(norm_Exyz * torch.conj(norm_Exyz))
+        ttt = torch.matmul(self.s.simple_mdata.view(-1, 1).T, norm_IntensityCon)
+        norm_IntensityTemp = indexImage * (dfmdg ** 2) * ttt
+        norm_IntensityBlank = norm_IntensityTemp
+        norm_Intensity = norm_IntensityBlank / weight
+        # print(f"dfmdg : {dfmdg}")
+        # print(f"norm_IntensityBlank : {norm_IntensityBlank}")
+        # print(f"weight : {weight}")
+        # print(f"norm_Intensity : {norm_Intensity}")
+
+        # torch_arr_bound(norm_Intensity, "norm_Intensity")
+
         intensity2D = torch.zeros(self.mask.fdata.shape, dtype=torch.float32)
         for i in range(self.s.simple_mdata.shape[0]):
             # print(i)
@@ -111,14 +118,18 @@ class ICC:
             valid_source_mask = rho2.le(1)
 
             # torch_arr_bound(valid_source_mask, f"valid_source_mask {i}")
-            f_calc = torch.masked_select(mask_fm, valid_source_mask)
+            f_calc = torch.masked_select(mask_fm, valid_source_mask) + sourceX[i]
             # torch_arr_bound(f_calc, f"f_calc[{i}]")
-            g_calc = torch.masked_select(mask_gm, valid_source_mask)
+            g_calc = torch.masked_select(mask_gm, valid_source_mask) + sourceY[i]
             # torch_arr_bound(g_calc, f"g_calc[{i}]")
+
+            self.calPupil(f_calc, g_calc)
+            # torch_arr_bound(self.pupil_fdata, "self.pupil_fdata")
+            # print(torch.sum(self.pupil_fdata))
+
             valid_mask_fdata = torch.masked_select(
                 self.mask.fdata[self.y1: self.y2, self.x1: self.x2], valid_source_mask)
 
-            self.calPupil(f_calc, g_calc)
 
             # torch_arr_bound(self.pupil_fdata, f"self.pupil fdata on source[{i}]")
             tempHAber = valid_mask_fdata * self.pupil_fdata
@@ -131,13 +142,13 @@ class ICC:
             ExyzFrequency[valid_source_mask] = tempHAber
 
             e_field[self.y1: self.y2, self.x1: self.x2] = ExyzFrequency
-            AA = torch.fft.fftshift(
-                torch.fft.ifft2(torch.fft.ifftshift(e_field)))
+            AA = torch.fft.fftshift(torch.fft.ifft2((e_field)))
             AA = torch.abs(AA * torch.conj(AA))
             AA = self.s.simple_mdata[i] * AA
             intensity2D += AA
 
         self.intensity2D = intensity2D / weight
+        self.intensity2D = self.intensity2D / norm_Intensity
         self.RI = torch.where(self.intensity2D >= 0.225, 1, 0)
 
 """
@@ -149,11 +160,11 @@ TODO:
 if __name__ == "__main__":
     gds_max_x = 1000
     gds_max_y = 1000
-    MASK_W = 1000
-    MASK_H = 1000
+    MASK_W = 2000
+    MASK_H = 2000
 
-    source_w = 1280
-    source_h = 1280
+    source_w = 3550
+    source_h = 3550
 
     s = Source()
     # s.type = "coventional"
@@ -163,13 +174,12 @@ if __name__ == "__main__":
     s.na = 1.35
     s.maskxpitch = source_w
     s.maskypitch = source_h
-    s.sigma_out = 0.7
-    s.sigma_in = 0.5
+    s.sigma_out = 0.9
+    s.sigma_in = 0.7
     s.smooth_deta = 0
     s.shiftAngle = 0
     # s.update()
     # s.ifft()
-    # print(s.data.size())
 
     # o = LensList()
     # o.maskxpitch = source_w
@@ -187,14 +197,15 @@ if __name__ == "__main__":
     # m.open_img()
     m.openGDS()
     m.maskfft()
+    # print(m.data.shape)
 
     icc = ICC(s, m)
     icc.calculate()
 
     torch_arr_bound(icc.intensity2D, "icc.intensity2D")
     # show_img(icc.intensity2D, "icc.intensity2D")
-    show_img(m.data, "m.data")
-    show_img(icc.RI, "icc.RI")
+    # show_img(m.data, "m.data")
+    # show_img(icc.RI, "icc.RI")
     # torch_arr_bound(icc.icc2d, "icc.icc2d")
     # show_img(icc.icc2d, "icc.icc2d")
     # torch_arr_bound(icc.jsource, "icc.jsource")

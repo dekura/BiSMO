@@ -29,13 +29,6 @@ class ImageHopkins:
         self.y2 = int(self.mask.y_gridnum // 2 + self.tcc.s.gnum + 1)
 
 
-        self.spat_part = torch.zeros((self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex64)
-
-        self.freq_part = torch.zeros((self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex64)
-
-        # self.ifft_image = pyfftw.FFTW(
-        #     self.freq_part, self.spat_part, axes=(0, 1), direction="FFTW_BACKWARD"
-        # )
 
     def calAI(self):  # much faster than calAIold()
         AI_freq_dense = torch.zeros(
@@ -57,10 +50,7 @@ class ImageHopkins:
                 torch.conj(torch.rot90(self.kernels[:, :, ii], 2))
                 * self.mask.fdata[self.y1 : self.y2, self.x1 : self.x2]
             )
-            # AA = sg.convolve2d(e_field, e_field_conj, "same", "wrap")
-            # print(e_field.view(1,1,-1).shape)
-            # print(e_field_conj.shape)
-            # print(e_field_conj.view(1,*e_field_conj.shape).shape)
+
             AA = F.conv2d(
                 e_field.view(1,*e_field.shape),
                 e_field_conj.view(1, 1,*e_field_conj.shape),
@@ -69,7 +59,7 @@ class ImageHopkins:
             AI_freq_sparse += self.coefs[ii] * AA
         AI_freq_dense[self.y1 : self.y2, self.x1 : self.x2] = AI_freq_sparse
 
-        self.freq_part[:] = torch.fft.ifftshift(AI_freq_dense)
+        self.freq_part = torch.fft.ifftshift(AI_freq_dense)
         self.spat_part = torch.fft.ifft2(self.freq_part)
         self.AI = torch.real(torch.fft.fftshift(self.spat_part)) / self.norm
 
@@ -85,7 +75,7 @@ class ImageHopkins:
             )
             AA = torch.fft.fftshift(torch.fft.ifft2(torch.fft.ifftshift(e_field)))
             AI += self.coefs[ii] * torch.abs(AA * torch.conj(AA))
-        self.AI = AI
+        self.AI = AI / self.order
 
     def calRI(self):
         self.RI = 1 / (1 + torch.exp(-self.resist_a * (self.AI - self.resist_t)))
@@ -113,19 +103,6 @@ class ImageHopkinsList(ImageHopkins):
         self.y1 = self.mask.y_gridnum // 2 - self.tcc.s.gnum
         self.y2 = self.mask.y_gridnum // 2 + self.tcc.s.gnum + 1
 
-        # self.spat_part = pyfftw.empty_aligned(
-        #     (self.mask.y_gridnum, self.mask.x_gridnum), dtype="complex128"
-        # )
-        # self.freq_part = pyfftw.empty_aligned(
-        #     (self.mask.y_gridnum, self.mask.x_gridnum), dtype="complex128"
-        # )
-        self.spat_part = torch.zeros((self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex64)
-
-        self.freq_part = torch.zeros((self.mask.y_gridnum, self.mask.x_gridnum), dtype=torch.complex64)
-
-        # self.ifft_image = pyfftw.FFTW(
-        #     self.freq_part, self.spat_part, axes=(0, 1), direction="FFTW_BACKWARD"
-        # )
 
     def calculate(self):
         length = len(self.focusList)
@@ -216,7 +193,7 @@ if __name__ == "__main__":
     """robust ILT setting"""
     from lens_torch import LensList
     from tcc_torch import TCCList
-
+    from utils import torch_arr_bound, show_img
     s = Source()
     s.na = 1.25
     s.maskxpitch = 600.0
@@ -242,3 +219,8 @@ if __name__ == "__main__":
     i.doseList = [0.95, 1, 1.05]
     i.doseCoef = [0.5, 1, 0.5]
     i.calculate()
+    index = 0
+    for ai in i.AIList:
+        torch_arr_bound(ai, f'ai[{index}]')
+        show_img(ai, f"ai[{index}]")
+        index += 1

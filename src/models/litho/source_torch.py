@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-03-29 15:45:14
-LastEditTime: 2023-04-28 03:40:41
+LastEditTime: 2023-05-01 01:12:22
 Contact: cgjcuhk@gmail.com
 Description:
 
@@ -20,7 +20,7 @@ def Edeta(deta, x):
         g = 0.5 * (1 + erf(x / deta))
         return g
     else:
-        g = torch.zeros(x.shape, dtype=torch.float64)
+        g = torch.zeros(x.shape, dtype=torch.float32)
         g[x >= 0] = 1
         return g
 
@@ -62,8 +62,8 @@ class Source:
     def update(self):
         self.detaf = self.wavelength / (self.maskxpitch * self.na)
         self.detag = self.wavelength / (self.maskypitch * self.na)
-        self.fnum = int(torch.ceil(torch.tensor(2 / self.detaf, dtype=torch.float64)))
-        self.gnum = int(torch.ceil(torch.tensor(2 / self.detag, dtype=torch.float64)))
+        self.fnum = int(torch.ceil(torch.tensor(2 / self.detaf, dtype=torch.float32)))
+        self.gnum = int(torch.ceil(torch.tensor(2 / self.detag, dtype=torch.float32)))
 
         fx = torch.linspace(
             -self.fnum * self.detaf, self.fnum * self.detaf, 2 * self.fnum + 1
@@ -160,16 +160,14 @@ class Source:
         # print(self.fx)
         fx = self.fx
         fy = self.fy
-        # print(fx)
-        size_x,  size_y = fx.shape[0], fx.shape[1]
-        fx1d = torch.reshape(fx, (size_x * size_y, 1))
 
-        size_x,  size_y = fy.shape[0], fy.shape[1]
-        fy1d = torch.reshape(fy, (size_x * size_y, 1))
+        fx1d = torch.reshape(fx, (-1, 1))
+        fy1d = torch.reshape(fy, (-1, 1))
+
         self.fx1d = fx1d
         self.fy1d = fy1d
 
-        self.simple_mdata = torch.reshape(self.data, (size_x * size_y, 1))
+        self.simple_mdata = torch.reshape(self.data, (-1, 1))
         high_light_mask = self.simple_mdata.ge(LOW_LIGHT_THRES)
         self.simple_mdata = torch.masked_select(self.simple_mdata, high_light_mask)
         self.simple_fx = torch.masked_select(self.fx1d, high_light_mask)

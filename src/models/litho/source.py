@@ -35,7 +35,7 @@ class Source:
         smooth_deta: float = 0.03,
         source_type: str = "annular",
         shiftAngle: float = math.pi / 4,
-        openAngle: float = math.pi / 16,
+        openAngle: float = math.pi / 6,
     ):
         self.na = na
         self.wavelength = wavelength
@@ -252,29 +252,32 @@ class Source:
 
 
 if __name__ == "__main__":
-    s = Source()
-    # s.type = "annular"
-    # s.type = "conventional"
-    # s.type = "quasar"
-    # s.type = "dipole"
-    s.sigma_in = 0.6
-    s.sigma_out = 0.8
-    s.smooth_deta = 0
-    s.maskxpitch = 1280
-    s.maskypitch = 1280
-    s.update()
-    s.ifft()
 
-    from utils import arr_bound, delta_np_torch, show_img
+    for o in [0.7, 0.8, 0.9]:
+        s = Source()
+        # s.type = "annular"
+        s.type = "conventional"
+        # s.type = "quasar"
+        # s.type = "dipole"
+        s.sigma_in = 0.6
+        s.sigma_out = o
+        s.smooth_deta = 0
+        s.maskxpitch = 1280
+        s.maskypitch = 1280
+        s.shiftAngle = 0
+        s.update()
+        # s.ifft()
 
-    show_img(s.data, "s.data")
-    show_img(s.mdata, "s.mdata")
-    arr_bound(s.data, "s.data")
-    # arr_bound(s.spatMutualData, "s.spatMutualData")
-    # arr_bound(s.data, "s.data")
-    # arr_bound(s.fx, "s.fx")
-    # s.simple_source()
-    # arr_bound(s.fx1d, "s.fx1d")
-    # arr_bound(s.mdata, "s.mdata")
-    # arr_bound(s.simple_mdata, "s.simple_mdata")
-    # arr_bound(s.simple_fx, "s.simple_fx")
+        from utils import arr_bound, delta_np_torch, show_img
+
+        show_img(s.data, "s.data")
+        # show_img(s.mdata, "s.mdata")
+        # arr_bound(s.data, "s.data")
+        # arr_bound(s.spatMutualData, "s.spatMutualData")
+        # arr_bound(s.data, "s.data")
+        # arr_bound(s.fx, "s.fx")
+        # s.simple_source()
+        # arr_bound(s.fx1d, "s.fx1d")
+        # arr_bound(s.mdata, "s.mdata")
+        # arr_bound(s.simple_mdata, "s.simple_mdata")
+        # arr_bound(s.simple_fx, "s.simple_fx")
