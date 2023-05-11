@@ -14,6 +14,7 @@ The real value for source.spatMutualData is used.
 import math
 
 import torch
+import torchvision.utils as U
 from torch.special import erf
 
 
@@ -234,10 +235,18 @@ class Source:
 
 
 if __name__ == "__main__":
-    s = Source()
-    s.type = "annular"
-    s.sigma_in = 0.6
-    s.sigma_out = 0.8
-    s.smooth_deta = 0
-    # s.update()
-    # s.ifft()
+    for source_type in ["annular", "quasar", "dipole"]:
+        s = Source()
+        s.maskxpitch = 2000
+        s.maskypitch = 2000
+        s.na = 1.35
+        s.shiftAngle = 0
+        # annular, quasar, dipole
+        s.type = source_type
+        s.sigma_in = 0.7
+        s.sigma_out = 0.9
+        s.smooth_deta = 0
+        s.update()
+        print(s.fnum)
+        # save_path = f'/home/gjchen21/projects/smo/SMO-ICCAD23/data/source_gt/{s.type}.png'
+        # U.save_image(s.data, save_path)

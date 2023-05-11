@@ -21,9 +21,9 @@ class Mask:
 
     def __init__(
         self,
-        dataset_name: str,
         layout_path: str,
         target_path: str,
+        dataset_name: str = "iccad13",
     ):
         self.dataset_name = dataset_name
         self.layout_path = layout_path

@@ -155,3 +155,5 @@ configs/local/default.yaml
 /data/MNIST
 .vscode
 /data/soed
+/data/npz
+/data/npz.zip
