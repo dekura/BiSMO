@@ -157,3 +157,4 @@ configs/local/default.yaml
 /data/soed
 /data/npz
 /data/npz.zip
+**.DS_Store
