@@ -3,7 +3,7 @@ defaults:
 
 # conventional , annular, quasar, dipole
 source_type: annular
-maskxpitch: 2000
-maskypitch: 2000
-sigma_out: 0.9
-sigma_in: 0.7
+maskxpitch: 1280
+maskypitch: 1280
+sigma_out: 0.95
+sigma_in: 0.63

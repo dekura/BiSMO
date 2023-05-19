@@ -284,11 +284,12 @@ class SMOLitModule(LightningModule):
                     aim_images = [
                         aim.Image(transform(i))
                         for i in [
+                            self.source_value.clone().detach(),
+                            self.mask.data,
                             self.mask.target_data,
                             binary_AI.to(torch.float32),
                             RI,
                             AI,
-                            self.source_value.clone().detach(),
                         ]
                     ]
                     self.logger.experiment.track(
