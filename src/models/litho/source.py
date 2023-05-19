@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-03-29 15:45:14
-LastEditTime: 2023-04-30 16:08:32
+LastEditTime: 2023-05-19 20:24:53
 Contact: cgjcuhk@gmail.com
 
 
@@ -243,10 +243,11 @@ if __name__ == "__main__":
         s.shiftAngle = 0
         # annular, quasar, dipole
         s.type = source_type
-        s.sigma_in = 0.7
-        s.sigma_out = 0.9
+        s.sigma_in = 0.63
+        s.sigma_out = 0.95
         s.smooth_deta = 0
         s.update()
         print(s.fnum)
-        # save_path = f'/home/gjchen21/projects/smo/SMO-ICCAD23/data/source_gt/{s.type}.png'
-        # U.save_image(s.data, save_path)
+        # save_path = f'/home/gjchen21/projects/smo/SMO-ICCAD23/data/source_gt_large/{s.type}.png'
+        save_path = f"/Users/joyg/phd/projects/SMO-ICCAD23/data/source_gt_large/{s.type}.png"
+        U.save_image(s.data, save_path)
