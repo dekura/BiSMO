@@ -237,8 +237,8 @@ class Source:
 if __name__ == "__main__":
     for source_type in ["annular", "quasar", "dipole"]:
         s = Source()
-        s.maskxpitch = 2000
-        s.maskypitch = 2000
+        s.maskxpitch = 1280
+        s.maskypitch = 1280
         s.na = 1.35
         s.shiftAngle = 0
         # annular, quasar, dipole
@@ -249,5 +249,5 @@ if __name__ == "__main__":
         s.update()
         print(s.fnum)
         # save_path = f'/home/gjchen21/projects/smo/SMO-ICCAD23/data/source_gt_large/{s.type}.png'
-        save_path = f"/Users/joyg/phd/projects/SMO-ICCAD23/data/source_gt_large/{s.type}.png"
+        save_path = f"/Users/joyg/phd/projects/SMO-ICCAD23/data/source_gt_1280/{s.type}.png"
         U.save_image(s.data, save_path)
