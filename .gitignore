@@ -154,7 +154,7 @@ configs/local/default.yaml
 .aim
 
 # Project intermediate file
-.DS_Store
 /images/
 /outputs/
-/src/models/.DS_Store
+
+**.DS_Store
