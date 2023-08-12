@@ -19,6 +19,7 @@ from torch.special import erf
 
 def Edeta(deta, x):
     if deta != 0:
+        # where erf def is: \mathrm{erf}(x) = \frac{2}{\sqrt{\pi}} \int_{0}^{x} e^{-t^2} dt
         g = 0.5 * (1 + erf(x / deta))
         return g
     else:
@@ -28,8 +29,11 @@ def Edeta(deta, x):
 
 
 class Source:
-    """Source.data is used for Abbe fomulation Source.mdata is used for Hopkins fomulation, Mutual
-    Intensity, TCC calculation."""
+    """
+    Source.data is used for Abbe fomulation
+    Source.mdata is used for Hopkins fomulation, Mutual
+    Intensity, TCC calculation.
+    """
 
     def __init__(
         self,

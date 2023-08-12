@@ -70,6 +70,7 @@ class AerialList(Aerial):
                 torch_arr_bound(AI, f"AIList[{ii}]")
             if self.vis.aerial_save:
                 save_img_from_01torch(AI, f"{self.vis.aerial_save_path}/AIList_{ii}.png")
+                print(self.vis.aerial_save_path)
 
     def show_RI(self):
         length = len(self.image.focusList)

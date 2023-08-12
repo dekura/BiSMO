@@ -28,6 +28,3 @@ test-full: ## Run all tests
 
 train: ## Train the model
 	python src/train.py
-
-litho: ## Forward litho process
-	python src/litho.py

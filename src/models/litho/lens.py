@@ -1,4 +1,5 @@
 """
+scalar pupil aberrations
 NOTE: This is for Scalar Pupil Assumption, not Jones Pupil
 LensList is a Lens container, used for, e.g., robust mask synthesis
 """

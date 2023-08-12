@@ -1,15 +1,16 @@
 _target_: src.models.mnist_module.MNISTLitModule
 
 optimizer:
-  _target_: torch.optim.Adam
+  _target_: torch.optim.Adam # MO is SGD
   _partial_: true
   lr: 0.001
   weight_decay: 0.0
 
+# TODO threshold and threshold_mode ?
 scheduler:
   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
   _partial_: true
-  mode: min
+  mode: min # matrix no longer reduces any more.
   factor: 0.1
   patience: 10
 

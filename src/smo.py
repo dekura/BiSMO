@@ -1,14 +1,21 @@
-from typing import Any, Dict, List, Optional, Tuple
+"""
+Author: Guojin Chen @ CUHK-CSE
+Homepage: https://gjchen.me
+Date: 2023-03-23 14:56:21
+LastEditTime: 2023-04-28 02:04:22
+Contact: cgjcuhk@gmail.com
+Description: Litho Main Function
+"""
+from typing import List, Tuple
 
 import hydra
-import lightning as L
-import rootutils
+import pyrootutils
 import torch
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig
 
-rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
+pyrootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 # ------------------------------------------------------------------------------------ #
 # the setup_root above is equivalent to:
 # - adding project root dir to PYTHONPATH
@@ -23,50 +30,64 @@ rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 # 1. either install project as a package or move entry files to project root dir
 # 2. set `root_dir` to "." in "configs/paths/default.yaml"
 #
-# more info: https://github.com/ashleve/rootutils
+# more info: https://github.com/ashleve/pyrootutils
 # ------------------------------------------------------------------------------------ #
 
 from src import utils
+from src.models.litho import Mask, Source
 
 log = utils.get_pylogger(__name__)
 
 
 @utils.task_wrapper
-def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-    """Trains the model. Can additionally evaluate on a testset, using best weights obtained during
-    training.
+def smo(cfg: DictConfig) -> Tuple[dict, dict]:
+    """Evaluates given checkpoint on a datamodule testset.
 
     This method is wrapped in optional @task_wrapper decorator, that controls the behavior during
     failure. Useful for multiruns, saving info about the crash, etc.
 
-    :param cfg: A DictConfig configuration composed by Hydra.
-    :return: A tuple with metrics and dict with all instantiated objects.
+    Args:
+        cfg (DictConfig): Configuration composed by Hydra.
+
+    Returns:
+        Tuple[dict, dict]: Dict with metrics and dict with all instantiated objects.
     """
-    # set seed for random number generators in pytorch, numpy and python.random
-    if cfg.get("seed"):
-        L.seed_everything(cfg.seed, workers=True)
+
+    # assert cfg.ckpt_path
+    # TODO What should be assert?
+
+    log.info(f"Instantiating Source <{cfg.source._target_}>")
+    s: Source = hydra.utils.instantiate(cfg.source)
+
+    log.info("Instantiating loggers...")
+    logger: List[Logger] = utils.instantiate_loggers(cfg.get("logger"))
+
+    log.info(f"Instantiating Mask <{cfg.mask._target_}>")
+    m: Mask = hydra.utils.instantiate(cfg.mask)
 
     log.info(f"Instantiating datamodule <{cfg.data._target_}>")
     datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data)
 
     log.info(f"Instantiating model <{cfg.model._target_}>")
-    model: LightningModule = hydra.utils.instantiate(cfg.model)
+    model: LightningModule = hydra.utils.instantiate(cfg.model, source=s, mask=m)
 
     log.info("Instantiating callbacks...")
     callbacks: List[Callback] = utils.instantiate_callbacks(cfg.get("callbacks"))
 
-    log.info("Instantiating loggers...")
-    logger: List[Logger] = utils.instantiate_loggers(cfg.get("logger"))
-
     log.info(f"Instantiating trainer <{cfg.trainer._target_}>")
     trainer: Trainer = hydra.utils.instantiate(cfg.trainer, callbacks=callbacks, logger=logger)
 
+    # for predictions use trainer.predict(...)
+    # predictions = trainer.predict(model=model, dataloaders=dataloaders, ckpt_path=cfg.ckpt_path)
+
     object_dict = {
         "cfg": cfg,
+        "source": s,
+        "logger": logger,
+        "mask": m,
         "datamodule": datamodule,
         "model": model,
         "callbacks": callbacks,
-        "logger": logger,
         "trainer": trainer,
     }
 
@@ -78,48 +99,37 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         log.info("Compiling model!")
         model = torch.compile(model)
 
-    if cfg.get("train"):
-        log.info("Starting training!")
+    if cfg.get("smo"):
+        log.info("Starting SMO training!")
         trainer.fit(model=model, datamodule=datamodule, ckpt_path=cfg.get("ckpt_path"))
 
     train_metrics = trainer.callback_metrics
 
-    if cfg.get("test"):
-        log.info("Starting testing!")
+    if cfg.get("inference"):
+        log.info("Starting Inference!")
         ckpt_path = trainer.checkpoint_callback.best_model_path
         if ckpt_path == "":
             log.warning("Best ckpt not found! Using current weights for testing...")
             ckpt_path = None
         trainer.test(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
         log.info(f"Best ckpt path: {ckpt_path}")
-
     test_metrics = trainer.callback_metrics
-
-    # merge train and test metrics
     metric_dict = {**train_metrics, **test_metrics}
-
+    # return metric_dict, object_dict
     return metric_dict, object_dict
 
 
-@hydra.main(version_base="1.3", config_path="../configs", config_name="train.yaml")
-def main(cfg: DictConfig) -> Optional[float]:
-    """Main entry point for training.
-
-    :param cfg: DictConfig configuration composed by Hydra.
-    :return: Optional[float] with optimized metric value.
-    """
+@hydra.main(version_base="1.3", config_path="../configs", config_name="smo.yaml")
+def main(cfg: DictConfig) -> None:
     # apply extra utilities
     # (e.g. ask for tags if none are provided in cfg, print cfg tree, etc.)
     utils.extras(cfg)
 
-    # train the model
-    metric_dict, _ = train(cfg)
+    metric_dict, _ = smo(cfg)
 
-    # safely retrieve metric value for hydra-based hyperparameter optimization
     metric_value = utils.get_metric_value(
         metric_dict=metric_dict, metric_name=cfg.get("optimized_metric")
     )
-
     # return optimized metric
     return metric_value
 

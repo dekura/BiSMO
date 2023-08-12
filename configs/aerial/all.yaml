@@ -1,0 +1,17 @@
+_target_: src.models.litho.aerial.AerialList
+resist_a: 100 # Resist model parameter: sharpness
+resist_t: 0.6 # Resist model parameter: threshold
+resist_tRef: 0.12 # combine with doselist, for resist image
+doseList:
+  - 1.0
+doseCoef:
+  - 1.0
+
+# for visualization
+vis:
+  aerial_show: false
+  aerial_save: true
+  aerial_save_path: ${paths.output_dir}/AI
+  resist_show: false
+  resist_save: true
+  resist_save_path: ${paths.output_dir}/RI

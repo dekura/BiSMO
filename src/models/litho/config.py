@@ -9,7 +9,7 @@ home = pathlib.Path.home()
 cwd = pathlib.Path.cwd()
 cwd_config = cwd / "config.yml"
 
-home_config = home / ".config" / "litho.yml"
+home_config = home / ".config" / "litho.yaml"
 config_dir = home / ".config"
 config_dir.mkdir(exist_ok=True)
 module_path = pathlib.Path(__file__).parent.absolute()
@@ -18,8 +18,8 @@ repo_path = module_path.parent
 
 class Path:
     module = module_path
-    repo = repo_path
-    gdsdir = repo_path / "NanGateLibGDS"
+    repo = repo_path # data
+    gdsdir = repo_path / "NanGateLibGDS" # data/NanGateLibGDS
     samples = module_path / "samples"
 
 

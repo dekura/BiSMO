@@ -1,0 +1,26 @@
+_target_: src.models.smo_module.SMOLitModule
+
+optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 0.01
+  weight_decay: 0.0
+
+scheduler:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _partial_: true
+  mode: min
+  factor: 0.1
+  patience: 20
+
+# choose from cosine | sigmoid
+source_acti: sigmoid
+source_sigmoid_steepness: 8
+
+# parameters for lens in SMO model
+lens_n_liquid: 1.414
+lens_reduction: 0.25
+
+target_intensity: 0.225
+
+save_img_folder: ${paths.data_dir}/soed

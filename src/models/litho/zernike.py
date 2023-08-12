@@ -6,7 +6,7 @@ LastEditTime: 2023-04-04 11:41:34
 Contact: cgjcuhk@gmail.com
 Description: implement for zernike functions
 """
-
+# TODO understand what zernike do.
 from math import factorial
 import torch
 from torch import arctan2, tensor, cos, linspace, meshgrid, sin, sqrt, where, zeros

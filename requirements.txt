@@ -3,6 +3,8 @@ torch>=2.0.0
 torchvision>=0.15.0
 lightning>=2.0.0
 torchmetrics>=0.11.4
+lightning-bolts
+aim
 
 # --------- hydra --------- #
 hydra-core==1.3.2
@@ -32,3 +34,8 @@ pillow
 numpy
 pyFFTW
 scikit-image
+
+# --------- OpenILT ------------ #
+opencv-python
+pandas
+plyfile

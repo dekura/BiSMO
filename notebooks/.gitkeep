@@ -1,0 +1,5 @@
+SO ONLY uses Abbe Model.
+MO can uses Abbe or Hopinks (TCC Matrix)
+所以有两条路线
+in source.py 定义了这俩model
+Source.data is used for Abbe fomulation Source
