@@ -152,3 +152,9 @@ configs/local/default.yaml
 
 # Aim logging
 .aim
+
+# Project intermediate file
+.DS_Store
+/images/
+/outputs/
+/src/models/.DS_Store
