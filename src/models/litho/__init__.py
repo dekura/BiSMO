@@ -11,14 +11,17 @@ from src.models.litho.config import PATH
 from src.models.litho.ilt import ILT, RobustILT
 from src.models.litho.image import ImageHopkins, ImageHopkinsList
 from src.models.litho.lens import Lens, LensList
-from src.models.litho.mask import Mask
+# from src.models.litho.mask import Mask
 # from litho.plot import plot
 from src.models.litho.source import Edeta, Source
 from src.models.litho.tcc import TCC, TCCList
 from src.models.litho.zernike import i2nm, polar_array, rnm, zernike, zerniken
 from src.models.litho.aerial import AerialList
+from src.models.litho.glp_mask import Mask
+from src.models.litho.kernel import Kernel
+from src.utils.utils import parseConfig
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 __all__ = [
     "Edeta",
     "ILT",
@@ -30,6 +33,7 @@ __all__ = [
     "PATH",
     "RobustILT",
     "Source",
+    "Kernel",
     "TCC",
     "TCCList",
     "config",
