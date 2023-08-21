@@ -19,6 +19,7 @@ from src.models.litho.zernike import i2nm, polar_array, rnm, zernike, zerniken
 from src.models.litho.aerial import AerialList
 from src.models.litho.glp_mask import Mask
 from src.models.litho.kernel import Kernel
+from src.models.litho.litho import LithoSim
 from src.utils.utils import parseConfig
 
 __version__ = "0.0.2"
@@ -52,4 +53,5 @@ __all__ = [
     "zernike",
     "zerniken",
     "AerialList",
+    "LithoSim",
 ]
