@@ -1,0 +1,10 @@
+_target_: src.models.litho.kernel.Kernel
+basedir: ${paths.root_dir}/kernel/
+defocus: False
+conjuncture: False
+combo: False
+# device: gpu
+
+# basedir="./kernel", defocus=False, conjuncture=False, combo=False, device=torch.device("cuda")
+# order: 30
+# src/models/litho/kernel.py

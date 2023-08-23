@@ -1,0 +1,7 @@
+_target_: src.models.litho.glp_mask.Mask
+layout_path: ${paths.data_dir}/ICCAD2013/M1_test1.glp
+down: 1
+TileSizeX: 2048
+TileSizeY: 2048
+OffsetX: 512
+OffsetY: 512

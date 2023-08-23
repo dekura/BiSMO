@@ -19,12 +19,20 @@ class Mask:
     def __init__(
         self,
         layout_path: str,
-        down = 1,
-    ):
+        down: int = 1, 
+        TileSizeX: int = 2048, 
+        TileSizeY: int = 2048, 
+        OffsetX: int = 512, 
+        OffsetY: int = 512, 
+        ):
 
         self._layout_path = layout_path
         self._polygons = [] # PGON list, list of points
         self._down = down
+        self._tilesizeX = TileSizeX
+        self._tilesizeY = TileSizeY
+        self._offsetX = OffsetX
+        self._offsetY = OffsetY
         """
         Process calculation
         """
@@ -94,38 +102,39 @@ class Mask:
                 point[1] += deltaY
 
 
-    def center(self, sizeX=2048, sizeY=2048, offsetX=512, offsetY=512): 
+    def center(self): 
         # canvas <- minX, minY, maxX, maxY
         # input is poly-ed
         canvas = self.range()
         # width and height
         canvasX = canvas[2] - canvas[0]
         canvasY = canvas[3] - canvas[1]
-        halfX = (sizeX - canvasX) // 2
-        halfY = (sizeY - canvasY) // 2
+        halfX = (self._tilesizeX - canvasX) // 2
+        halfY = (self._tilesizeY - canvasY) // 2
         # the distance between centers of whole map and mask
         deltaX = halfX - canvas[0]
         deltaY = halfY - canvas[1]
         # in the center and then x - offsetX, y - offsetY
-        self.move(deltaX - offsetX, deltaY - offsetY)
+        self.move(deltaX - self._offsetX, deltaY - self._offsetY)
     
     # print image, img: ndarray
-    def image(self, sizeX=2048, sizeY=2048, offsetX=512, offsetY=512): 
-        polygons = list(map(lambda x: np.array(x, np.int64) + np.array([[offsetX, offsetY]]), self._polygons))
-        img = np.zeros([sizeX, sizeY], dtype=np.float32)
+    def image(self): 
+        polygons = list(map(lambda x: np.array(x, np.int64) + np.array([[self._offsetX, self._offsetY]]), self._polygons))
+        img = np.zeros([self._tilesizeX, self._tilesizeY], dtype=np.float32)
         for idx in range(len(polygons)): 
             img = cv2.fillPoly(img, [polygons[idx]], color=255)
         return img
     # norm to 0-1
-    def mat(self, sizeX=2048, sizeY=2048, offsetX=512, offsetY=512): 
-        return self.image(sizeX, sizeY, offsetX, offsetY) / 255.0
+    def mat(self): 
+        return self.image() / 255.0
 
     # TileSizeX, TileSizeY, OffsetX, OffsetY are in the config
-    def poly2tensor(self, TileSizeX=2048, TileSizeY=2048, OffsetX=512, OffsetY=512):
+    def poly2tensor(self):
+        # write polygon 2 self._polygon
         self.openGLP()
         # poly -> ndarray
-        self.center(TileSizeX, TileSizeY, OffsetX, OffsetY)
-        mask_np = self.mat(TileSizeX, TileSizeY, OffsetX, OffsetY)
+        self.center()
+        mask_np = self.mat()
         # 先写死，后面从config中调的话再改
         self.data = torch.tensor(mask_np, dtype=torch.float32, device=torch.device("cuda"))
         self.params = self.data * 2.0 - 1.0

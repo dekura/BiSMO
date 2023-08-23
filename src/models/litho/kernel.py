@@ -57,4 +57,4 @@ class Kernel:
 
 if __name__ == '__main__':
     k = Kernel()
-    print(k.kernels.shape)
+    print(k.kernels)

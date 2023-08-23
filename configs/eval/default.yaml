@@ -1,0 +1,2 @@
+_target_: src.models.litho.eval.Evaluate
+thresh: 0.5
