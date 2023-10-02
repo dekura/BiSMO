@@ -1,5 +1,7 @@
-import sys
-sys.path.append('.')
+'''
+Description: MO with Abbe's Approach.
+Mask: self.target_data is Unchanging, while self.data is changing.
+'''
 
 from pathlib import Path
 from typing import Any, Optional
@@ -17,14 +19,12 @@ from torchmetrics import MeanMetric
 
 from src.models.litho.img_mask import Mask
 from src.models.litho.source import Source
-from src.models.litho.lens import LensList
-from src.models.litho.tcc import TCCList
-from src.models.litho.aerial import AerialList
 from src.models.litho.utils import torch_arr_bound
 
 
 class SMOLitModule(LightningModule):
-    """
+    """Example of LightningModule for MNIST classification.
+
     A LightningModule organizes your PyTorch code into 6 sections:
         - Initialization (__init__)
         - Train Loop (training_step)
@@ -32,23 +32,20 @@ class SMOLitModule(LightningModule):
         - Test loop (test_step)
         - Prediction Loop (predict_step)
         - Optimizers and LR Schedulers (configure_optimizers)
+
+    Docs:
+        https://lightning.ai/docs/pytorch/latest/common/lightning_module.html
     """
 
     def __init__(
-        self, 
-        source: Source, 
-        mask: Mask, 
-        # lens: LensList, 
-        dose_list: list = [0.98, 1.00, 1.02,], 
-        # dose_coff: list = [1, 1, 1,], 
-        resist_tRef: int = 0.06, 
-        weight_pvb: float = 1.0, 
-        weight_l2: float = 1.0, 
-        # tcc: TCCList, 
-        # aerial: AerialList, 
-        # optimizer: torch.optim.Optimizer,
-        # scheduler: torch.optim.lr_scheduler,
+        self,
+        source: Source,
+        mask: Mask,
+        optimizer: torch.optim.Optimizer,
+        scheduler: torch.optim.lr_scheduler,
         source_acti: str = "sigmoid",
+        mask_acti: str = "sigmoid",
+        mask_sigmoid_steepness: float = 8,
         source_sigmoid_steepness: float = 8,
         lens_n_liquid: float = 1.44,
         lens_reduction: float = 0.25,
@@ -56,118 +53,54 @@ class SMOLitModule(LightningModule):
         low_light_thres: float = 1e-3,
         visual_in_val: bool = True,
         resist_sigmoid_steepness: float = 30,
+        dose_list: list = [0.98, 1.00, 1.02],
+        resist_tRef: float = 0.12,
+        wieght_l2: float = 1.00,
+        weight_pvb: float = 1.00,
         save_img_folder: str = "./data/soed",
-    ):
+    ) -> None:
         super().__init__()
 
         # this line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False, ignore=["source", "mask"])
+        # loss function
+        self.criterion = nn.MSELoss()
 
         # source
-        self.source = source
-        self.source.update()
-        self.source.ifft()
+        self.s = source
+        self.s.update()
 
-        # lens / pupil
-        # lens_list.focusList = [-50, 0, 50]
-        # lens_list.focusCoef = [0.5, 1, 0.5]
-        # self.lens = lens
-        # self.lens.focusList = [0.0]
-        # self.lens.focusCoef = [1.0]
-        # self.lens.calculate()
-
-        # tcc
-        # self.tcc = TCCList(self.source, self.lens)
-        # self.tcc.calculate()
-
-        # mask
+        # mask, init mask.data, mask.fdata, no need for init_mask_params
         self.mask = mask
         self.mask.open_layout()
         self.mask.maskfft()
 
-        # AI and RI, new
-        # self.aerial = AerialList(self.mask, self.tcc, Any)
-        # a.image.doseList = [0.98, 1, 1.02]
-        # a.image.doseCoef = [1, 1, 1]
-        # self.aerial.image.doseList = [0.98, 1, 1.02,]
-        # self.aerial.image.doseCoef = [1, 1, 1,]
-        # a.litho()
-        # self.aerial.litho()
-
-        # doselist
-        self.resist_tRef = resist_tRef
+        # dose list
         self.dose_list = dose_list
-        # self.dose_coff = dose_coff
-        self.weight_pvb = weight_pvb
-        self.weight_l2 = weight_l2
 
         # for averaging loss across batches
         self.train_loss = MeanMetric()
         self.val_loss = MeanMetric()
+
         # activation
+        self.sigmoid_mask = nn.Sigmoid()
         self.sigmoid_source = nn.Sigmoid()
 
-        # loss function
-        # self.criterion = 
-        # length = len(self.aerial.image.focusList)
-        # lengthD = len(self.aerial.image.doseList)
-
-        # for ii in range(length):
-            # pvb, self.aerial.image.RIList is a torch
-            # pvb = torch.sum((self.aerial.image.RIList[ii][0] - self.aerial.image.RIList[ii][1]) ** 2) + torch.sum((self.aerial.image.RIList[ii][2] - self.aerial.image.RIList[ii][1]) ** 2)
-            # mse
-            # l2 = torch.sum((self.aerial.image.RIList[ii][1] - self.mask.data).abs())
-            # print('pvb: ', pvb.sum(), 'l2', l2)
-
-        # self.criterion = nn.MSELoss()
-        # self.criterion = nn.SmoothL1Loss + pvb + l2
-        self.criterion = nn.SmoothL1Loss()
-
+        # init
         self.init_source_params()
+        # self.init_mask_params()
 
-    # RI = sigmoid(resist_sigmoid_steepness * (AI - target_intensity))
-    def sigmoid_resist(self, aerial):
+    def sigmoid_resist(self, aerial) -> torch.Tensor:
         return torch.sigmoid(
             self.hparams.resist_sigmoid_steepness * (aerial - self.hparams.target_intensity)
         )
 
-    def init_freq_domain_on_device(self):
-        '''
-        na: float = 1.35,
-        wavelength: float = 193.0,
-        maskxpitch: float = 1280.0,
-        maskypitch: float = 1280.0,
-        sigma_out: float = 0.95,
-        sigma_in: float = 0.63,
-        smooth_deta: float = 0.03,
-        source_type: str = "annular",
-        shiftAngle: float = math.pi / 4,
-        openAngle: float = math.pi / 16,
-
-        193 / (1280 * 1.35) = 0.112
-
-        fnum / gnum = 2 / 0.112 = 17.906 -> 18
-
-        self.detaf = self.wavelength / (self.maskxpitch * self.na)
-        self.detag = self.wavelength / (self.maskypitch * self.na)
-        self.fnum = int(torch.ceil(torch.tensor(2 / self.detaf, dtype=torch.float64)))
-        self.gnum = int(torch.ceil(torch.tensor(2 / self.detag, dtype=torch.float64)))
-
-        - 18 * 0.112
-
-        fx = torch.linspace(-self.fnum * self.detaf, self.fnum * self.detaf, 2 * self.fnum + 1)
-        fy = torch.linspace(-self.gnum * self.detag, self.gnum * self.detag, 2 * self.gnum + 1)
-        
-        form a meshgrid
-
-        FX, FY = torch.meshgrid(fx, fy, indexing="xy")
-        '''
-
+    def init_freq_domain_on_device(self) -> None:
         device = self.device
-        # hyper-parameters, int: 18
-        self.gnum = self.source.gnum
-        self.fnum = self.source.fnum
+        # hyper-parameters
+        self.gnum = self.s.gnum
+        self.fnum = self.s.fnum
 
         self.x_gridnum = self.mask.x_gridnum
         self.y_gridnum = self.mask.y_gridnum
@@ -176,8 +109,8 @@ class SMOLitModule(LightningModule):
         self.y1 = int(self.y_gridnum // 2 - self.gnum)
         self.y2 = int(self.y_gridnum // 2 + self.gnum + 1)
 
-        normalized_period_x = self.x_gridnum / (self.source.wavelength / self.source.na)
-        normalized_period_y = self.y_gridnum / (self.source.wavelength / self.source.na)
+        normalized_period_x = self.x_gridnum / (self.s.wavelength / self.s.na)
+        normalized_period_y = self.y_gridnum / (self.s.wavelength / self.s.na)
         mask_fm = (torch.arange(self.x1, self.x2) - self.x_gridnum // 2) / normalized_period_x
         mask_fm = mask_fm.to(device)
 
@@ -192,8 +125,8 @@ class SMOLitModule(LightningModule):
         self.dfmdg = 1 / self.norm_spectrum_calc
 
         # source part
-        self.s_fx = self.source.fx.to(device)
-        self.s_fy = self.source.fy.to(device)
+        self.s_fx = self.s.fx.to(device)
+        self.s_fy = self.s.fy.to(device)
         self.source_fx1d = torch.reshape(self.s_fx, (-1, 1))
         self.source_fy1d = torch.reshape(self.s_fy, (-1, 1))
 
@@ -207,24 +140,44 @@ class SMOLitModule(LightningModule):
         else:
             self.mask.target_data = self.mask.data.detach().clone()
 
-    def init_source_params(self):
-        # [-1, 1], learnable
-        self.source_params = nn.Parameter(torch.zeros(self.source.data.shape))
+    def init_mask_params(self) -> None:
+        # learnable
+        self.mask_params = nn.Parameter(torch.zeros(self.mask.data.shape))
+        self.mask_params.data = self.mask.target_data
+        self.mask_value = self.mask_params
+
+
+    def init_source_params(self) -> None:
+        # [-1, 1]
+        self.source_params = nn.Parameter(torch.zeros(self.s.data.shape))
 
         # for sigmoid
         if self.hparams.source_acti == "sigmoid":
-            self.source_params.data[torch.where(self.source.data > 0.5)] = 2 - 0.02
+            self.source_params.data[torch.where(self.s.data > 0.5)] = 2 - 0.02
             self.source_params.data.sub_(0.99)
         elif self.hparams.source_acti == "cosine":
-            self.source_params.data[torch.where(self.source.data > 0.5)] = 0.1
-            self.source_params.data[torch.where(self.source.data <= 0.5)] = torch.pi - 0.1
+            self.source_params.data[torch.where(self.s.data > 0.5)] = 0.1
+            self.source_params.data[torch.where(self.s.data <= 0.5)] = torch.pi - 0.1
         else:
             # default cosine
-            self.source_params.data[torch.where(self.source.data > 0.5)] = 0.1
-            self.source_params.data[torch.where(self.source.data <= 0.5)] = torch.pi - 0.1
+            self.source_params.data[torch.where(self.s.data > 0.5)] = 0.1
+            self.source_params.data[torch.where(self.s.data <= 0.5)] = torch.pi - 0.1
+        # init source_value
+        self.source_value = self.source_params
 
-    # activate source
-    def update_source_value(self):
+    def update_mask_value(self) -> None:
+        if self.hparams.mask_acti == 'sigmoid':
+            # mask after activation func
+            self.mask.data = self.sigmoid_mask(
+                self.hparams.mask_sigmoid_steepness * self.mask_params
+            )
+        else:
+            self.mask.data = self.sigmoid_mask(
+                self.hparams.mask_sigmoid_steepness * self.mask_params
+            )
+        self.mask.maskfft()
+
+    def update_source_value(self) -> None:
         if self.hparams.source_acti == "cosine":
             self.source_value = (1 + torch.cos(self.source_params)) / 2
         elif self.hparams.source_acti == "sigmoid":
@@ -234,8 +187,7 @@ class SMOLitModule(LightningModule):
         else:
             self.source_value = (1 + torch.cos(self.source_params)) / 2
 
-    # change source to annular or other types
-    def get_valid_source(self):
+    def get_valid_source(self) -> None:
         self.simple_source_value = torch.reshape(self.source_value, (-1, 1))
         high_light_mask = self.simple_source_value.ge(self.hparams.low_light_thres)
 
@@ -245,10 +197,10 @@ class SMOLitModule(LightningModule):
         self.simple_source_fxy2 = self.simple_source_fx1d.pow(2) + self.simple_source_fy1d.pow(2)
         self.source_weight = torch.sum(self.simple_source_value)
 
-    def cal_pupil(self, FX, FY):
+    def cal_pupil(self, FX, FY) -> torch.Tensor:
         R = torch.sqrt(FX**2 + FY**2)  # rho
         fgSquare = torch.square(R)
-        NA = self.source.na
+        NA = self.s.na
         n_liquid = self.hparams.lens_n_liquid
         M = self.hparams.lens_reduction
         obliquityFactor = torch.sqrt(
@@ -259,7 +211,7 @@ class SMOLitModule(LightningModule):
         # no aberrations
         return obliquityFactor * (1 + 0j)
 
-    def get_norm_intensity(self):
+    def get_norm_intensity(self) -> None:
         norm_pupil_fdata = self.cal_pupil(self.simple_source_fx1d, self.simple_source_fy1d)
         norm_tempHAber = self.norm_spectrum_calc * norm_pupil_fdata
         norm_ExyzFrequency = norm_tempHAber.view(-1, 1)
@@ -272,14 +224,15 @@ class SMOLitModule(LightningModule):
         norm_Intensity = norm_IntensityTemp / self.source_weight
         self.norm_Intensity = norm_Intensity.detach()
 
-    def on_fit_start(self):
+    def on_fit_start(self) -> None:
         # we need to move the freq to device
         self.init_freq_domain_on_device()
 
     def forward(self):
-        self.update_source_value()
+        # self.update_source_value()
         self.get_valid_source()
         self.get_norm_intensity()
+        self.update_mask_value()
         intensity2D = torch.zeros(self.mask.data.shape, dtype=torch.float32, device=self.device)
 
         # print(self.simple_source_value.shape[0])
@@ -323,30 +276,23 @@ class SMOLitModule(LightningModule):
         self.intensity2D = intensity2D / self.source_weight
         self.intensity2D = self.intensity2D / self.norm_Intensity
         self.RI = self.sigmoid_resist(self.intensity2D)
-        # real RI, 
-        # instead self.hparams.target_intensity to
-        # self.resist_tRef
-        # self.RI = (self.RI >= self.hparams.target_intensity).to(torch.float64)
-        # threshold, substrate
         self.RIlist = []
+        # threshold
         for ii in range(self.dose_list):
-            resist_t = ii * self.hparams.target_intensity
+            resist_t = ii * self.hparams.resist_tRef
             self.RIlist.append((self.RI >= resist_t).to(torch.float64))
         return self.intensity2D, self.RI, self.RIlist
 
     def model_step(self):
-        AI, RI, RIlist = self.forward()
-        # loss, pvb, l2
-        pvb = (torch.sum((RIlist[0] - RI) ** 2) + torch.sum((RIlist[2] - RI) ** 2)).requires_grad_(True)
-        l2 = self.criterion(RI, self.mask.target_data)
-        # origin loss
-        # loss = self.criterion(RI, self.mask.target_data)
-        # true loss
-        loss = (pvb * self.weight_pvb) + (l2 * self.weight_l2)
-        return loss, l2, pvb, AI, RI
+        AI, _, RIlist = self.forward()
+        # l2, pvb
+        l2 = self.criterion(RIlist[1], self.mask.target_data)
+        pvb = (self.criterion(RIlist[0], RIlist[1]) + self.criterion(RIlist[2], RIlist[1])) * self.mask.target_data.shape[0] * self.mask.target_data.shape[1]
+        loss = l2 * self.hparams.weight_l2 + pvb * self.hparams.weight_pvb
+        return l2, pvb, loss, AI, RIlist[1]
 
-    def training_step(self, batch: Any, batch_idx: int):
-        loss, l2, pvb, _, _ = self.model_step()
+    def training_step(self, batch: Any, batch_idx: int) -> torch.Tensor:
+        l2, pvb, loss, _, _ = self.model_step()
 
         # update and log metrics
         self.train_loss(loss)
@@ -356,15 +302,15 @@ class SMOLitModule(LightningModule):
         # return loss or backpropagation will fail
         # binary_AI = torch.where(AI.detach() > self.hparams.target_intensity, 1, 0)
         # l2_error = (self.mask.target_data - binary_AI).abs().sum()
-        # l2_error = (self.mask.target_data - RI).abs().sum()
-        self.log("train/l2", l2, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        l2_error = l2.detach()
+        pvb_error = pvb.detach()
+        self.log("train/l2", l2_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("train/pvb", pvb_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        # return {"loss": loss}
+        return loss
 
-        self.log("train/pvb", pvb, on_step=False, on_epoch=True, prog_bar=False, logger=True)
-        return {"loss": loss}
-    
-
-    def validation_step(self, batch: Any, batch_idx: int):
-        loss, _, _, AI, RI = self.model_step()
+    def validation_step(self, batch: Any, batch_idx: int) -> None:
+        l2, pvb, loss, AI, RIlist = self.model_step()
 
         self.val_loss(loss)
         self.log(
@@ -379,10 +325,13 @@ class SMOLitModule(LightningModule):
             logger=True,
         )
         # for aim logger
-
-        binary_AI = torch.where(AI.detach() > self.hparams.target_intensity, 1, 0)
-        l2_error = (self.mask.target_data - binary_AI).abs().sum()
+        l2_error = l2.detach()
+        pvb_error = pvb.detach()
+        binary_AI = RIlist[1].detach()
+        # binary_AI = torch.where(AI.detach() > self.hparams.target_intensity, 1, 0)
+        # l2_error = (self.mask.target_data - binary_AI).abs().sum()
         self.log("val/l2", l2_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("val/l2", pvb_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
 
         if self.hparams.visual_in_val:
             if self.global_rank == 0:
@@ -395,7 +344,7 @@ class SMOLitModule(LightningModule):
                             self.mask.data,
                             self.mask.target_data,
                             binary_AI.to(torch.float32),
-                            RI,
+                            # RI,
                             AI,
                         ]
                     ]
@@ -407,26 +356,24 @@ class SMOLitModule(LightningModule):
                     )
 
     def test_step(self, batch: Any, batch_idx: int):
-        _, _, _, AI, RI = self.model_step()
-        source_type = self.source.type
+        _, _, _, AI, RIlist = self.model_step()
+        # source_type = self.s.type
         save_img_folder = Path(self.hparams.save_img_folder) / self.mask.dataset_name
-        RI_folder = save_img_folder / f"{source_type}_RI"
+        RI_folder = save_img_folder / f"moed_RI"
         RI_folder.mkdir(parents=True, exist_ok=True)
-        SO_folder = save_img_folder / f"{source_type}_SO"
-        SO_folder.mkdir(parents=True, exist_ok=True)
-        mask_folder = save_img_folder / f"{source_type}_mask"
+        # SO_folder = save_img_folder / f"moed_SO"
+        # SO_folder.mkdir(parents=True, exist_ok=True)
+        mask_folder = save_img_folder / f"moed_mask"
         mask_folder.mkdir(parents=True, exist_ok=True)
 
-        # save images
+        binary_AI = RIlist[1].detach()
         # binary_AI = torch.where(AI.detach() > self.hparams.target_intensity, 1, 0)
-        # true binary RI
-        binary_AI = RI
-        binary_source = torch.where(self.source_params > 0, 1, 0)
+        # binary_source = torch.where(self.source_params > 0, 1, 0)
         binary_AI_path = RI_folder / self.mask.mask_name
-        binary_source_path = SO_folder / self.mask.mask_name
+        # binary_source_path = SO_folder / self.mask.mask_name
         binary_mask_path = mask_folder / self.mask.mask_name
         U.save_image(binary_AI.to(torch.float32), binary_AI_path)
-        U.save_image(binary_source.to(torch.float32), binary_source_path)
+        # U.save_image(binary_source.to(torch.float32), binary_source_path)
         U.save_image(self.mask.data, binary_mask_path)
 
     def configure_optimizers(self):
@@ -452,25 +399,4 @@ class SMOLitModule(LightningModule):
 
 
 if __name__ == "__main__":
-    # _ = SMOLitModule(None, None, None)
-    mask_path = 'data/soed/ibm_opc_test/mask/t1_0_mask.png'
-    m = Mask(layout_path = mask_path, target_path = mask_path)
-    s = Source(source_type = 'annular', 
-               maskxpitch = 1280, 
-               maskypitch = 1280, 
-               sigma_in = 0.63, 
-               sigma_out = 0.95, 
-               )
-    
-    o = LensList(nLiquid = 1.414, 
-                 wavelength = 193.0, 
-                 defocus = 0.0, 
-                 maskxpitch = 1280, 
-                 maskypitch = 1280, 
-                 na = 1.35, 
-                 )
-    _ = SMOLitModule(source=s, 
-                     mask=m, 
-                     lens=o)
-
-
+    _ = SMOLitModule(None, None, None)
