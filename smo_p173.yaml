@@ -1,4 +1,4 @@
-name: smo
+name: cpusmo
 channels:
   - conda-forge
   - defaults
@@ -95,7 +95,7 @@ dependencies:
     - kiwisolver==1.4.4
     - lazy-loader==0.2
     - lightning==2.0.2
-    - lightning-bolts==0.7.0.dev0
+    - lightning-bolts==0.7.0
     - lightning-cloud==0.5.34
     - lightning-utilities==0.8.0
     - lit==16.0.2
