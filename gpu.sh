@@ -3,7 +3,7 @@
  # @Author: Guojin Chen @ CUHK-CSE
  # @Homepage: https://gjchen.me
  # @Date: 2023-05-01 01:25:56
- # @LastEditTime: 2023-10-04 19:29:32
+ # @LastEditTime: 2023-10-04 19:52:41
  # @Contact: cgjcuhk@gmail.com
  # @Description:
 ###
@@ -19,6 +19,6 @@ for type in $source_list; do
     for i in $(seq 1 1); do
         layout_path=$layout_folder"/ibm_opc_test/mask/t"$i"_0_mask.png"
         echo "Starting smo for: "$layout_path $type
-        $python src/smo.py trainer=cpu task_name="smo_"$type mask.layout_path=$layout_path mask.target_path=$layout_path source.source_type=$type
+        $python src/smo.py task_name="smo_"$type mask.layout_path=$layout_path mask.target_path=$layout_path source.source_type=$type
     done
 done

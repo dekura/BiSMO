@@ -11,6 +11,7 @@ from typing import List, Tuple
 import hydra
 import pyrootutils
 import torch
+torch.set_num_threads(128)
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig

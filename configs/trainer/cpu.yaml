@@ -1,5 +1,11 @@
 defaults:
   - default.yaml
 
+# perform a validation loop every N training epochs
+max_epochs: 1000
+check_val_every_n_epoch: 100
+log_every_n_steps: 100
+
+# change to cpu
 accelerator: cpu
-devices: 1
+devices: auto
