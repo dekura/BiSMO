@@ -1,0 +1,33 @@
+_target_: src.models.moabbe_module.MOLitModule
+
+optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 0.01
+  weight_decay: 0.0
+
+scheduler:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _partial_: true
+  mode: min
+  factor: 0.1
+  patience: 20
+
+# choose from cosine | sigmoid
+mask_acti: sigmoid
+mask_sigmoid_steepness: 4
+
+# parameters for lens in SMO model
+lens_n_liquid: 1.414
+lens_reduction: 0.25
+
+target_intensity: 0.425
+
+low_light_thres: 0.001
+
+resist_sigmoid_steepness: 30
+
+weight_l2: 1.00
+weight_pvb: 1.00
+
+save_img_folder: ${paths.data_dir}/soed

@@ -45,20 +45,20 @@ class MOLitModule(LightningModule):
         mask: Mask,
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler,
-        source_acti: str = "sigmoid",
+        dose_list: list = [0.98, 1.00, 1.02],
+        # source_acti: str = "sigmoid",
         mask_acti: str = "sigmoid",
-        source_type: str = 'annular',
-        mask_sigmoid_steepness: float = 8,
-        source_sigmoid_steepness: float = 8,
+        # source_type: str = 'annular',
+        mask_sigmoid_steepness: float = 4,
+        # source_sigmoid_steepness: float = 8,
         lens_n_liquid: float = 1.44,
         lens_reduction: float = 0.25,
-        target_intensity: float = 0.225,
+        target_intensity: float = 0.425,
         low_light_thres: float = 1e-3,
         visual_in_val: bool = True,
         resist_sigmoid_steepness: float = 30,
-        dose_list: list = [0.98, 1.00, 1.02],
         # resist_tRef: float = 0.12,
-        wieght_l2: float = 1.00,
+        weight_l2: float = 1.00,
         weight_pvb: float = 1.00,
         save_img_folder: str = "./data/soed",
     ) -> None:
@@ -91,7 +91,7 @@ class MOLitModule(LightningModule):
         self.sigmoid_source = nn.Sigmoid()
 
         # init
-        self.init_source_params()
+        # self.init_source_params()
         self.init_mask_params()
 
     def sigmoid_resist(self, aerial) -> torch.Tensor:
@@ -147,9 +147,9 @@ class MOLitModule(LightningModule):
     def init_mask_params(self) -> None:
         # learnable
         # self.mask_params = nn.Parameter(torch.zeros(self.mask.data.shape))
-        self.mask_params = nn.Parameter(self.mask.data)
+        self.mask_params = nn.Parameter(self.mask.data.float())
         # self.mask_params.data = self.mask.target_data
-        self.mask_value = self.mask_params
+        # self.mask_value = self.mask_params
 
 
     def init_source_params(self) -> None:
@@ -221,19 +221,19 @@ class MOLitModule(LightningModule):
 
     def litho(self) -> tuple[list, list]:
         # init source.data
-        if self.hparams.source_type == 'annular':
-            # (37, 37), where maskxpitch/maskypitch = 1280
-            self.s.data = torch.from_numpy(cv2.imread(filename = 'data/source_gt_1280/annular.png', flags = 0))
-        elif self.hparams.source_type == 'quasar':
-            self.s.data = torch.from_numpy(cv2.imread(filename = 'data/source_gt_1280/quasar.png', flags = 0))
-        elif self.hparams.source_type == 'dipole':
-            self.s.data = torch.from_numpy(cv2.imread(filename = 'data/source_gt_1280/dipole.png', flags = 0))
-        else:
-            self.s.data = torch.from_numpy(cv2.imread(filename = 'data/source_gt_1280/annular.png', flags = 0))
+        # if self.hparams.source_type == 'annular':
+        #     # (37, 37), where maskxpitch/maskypitch = 1280
+        #     self.s.data = torch.from_numpy(cv2.imread(filename = 'data/source_gt_1280/annular.png', flags = 0))
+        # elif self.hparams.source_type == 'quasar':
+        #     self.s.data = torch.from_numpy(cv2.imread(filename = 'data/source_gt_1280/quasar.png', flags = 0))
+        # elif self.hparams.source_type == 'dipole':
+        #     self.s.data = torch.from_numpy(cv2.imread(filename = 'data/source_gt_1280/dipole.png', flags = 0))
+        # else:
+        #     self.s.data = torch.from_numpy(cv2.imread(filename = 'data/source_gt_1280/annular.png', flags = 0))
 
         self.update_mask_value()
         # self.source_data is un-learnable
-        self.source_data = torch.reshape(self.s.data, (-1, 1))
+        self.source_data = torch.reshape(self.s.data.float(), (-1, 1))
         high_light_mask = self.source_data.ge(self.hparams.low_light_thres)
 
         self.source_data = torch.masked_select(self.source_data, high_light_mask)
@@ -261,7 +261,7 @@ class MOLitModule(LightningModule):
 
         # 1. calculate pupil_fdata
         mask_fvalue = [self.mask_fvalue_min, self.mask_fvalue_norm, self.mask_fvalue_max]
-        for ii in mask_fvalue:
+        for ii in range(3):
             intensity2D = torch.zeros(self.mask.target_data.shape, dtype=torch.float32, device=self.device)
             for i in range(self.source_data.shape[0]):
                 rho2 = (
@@ -299,10 +299,11 @@ class MOLitModule(LightningModule):
 
                 AA = torch.fft.fftshift(torch.fft.ifft2(e_field))
                 AA = torch.abs(AA * torch.conj(AA))
-                AA = self.simple_source_value[i] * AA
+                AA = self.source_data[i] * AA
                 intensity2D += AA
-            self.intensity2D_list.append(intensity2D / self.source_weight / self.norm_Intensity)
-            self.RI_list.append(self.sigmoid_resist(self.intensity2D))
+            normed_intensity2D = intensity2D / self.source_weight / self.norm_Intensity
+            self.intensity2D_list.append(normed_intensity2D)
+            self.RI_list.append(self.sigmoid_resist(normed_intensity2D))
 
 
         # 3. calculate intensity
@@ -392,18 +393,20 @@ class MOLitModule(LightningModule):
         l2 = self.criterion(RIlist[1], self.mask.target_data)
         pvb = (self.criterion(RIlist[0], RIlist[1]) + self.criterion(RIlist[2], RIlist[1])) * self.mask.target_data.shape[0] * self.mask.target_data.shape[1]
         loss = l2 * self.hparams.weight_l2 + pvb * self.hparams.weight_pvb
+        # loss.requires_grad_(True)
         return l2, pvb, loss, AI, RIlist[1]
     
     def model_step(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         AIlist, RIlist = self.litho()
         # binary RI
-        RI_min = torch.where(RIlist[0] > self.hparams.target_intensity, 1, 0)
-        RI_norm = torch.where(RIlist[1] > self.hparams.target_intensity, 1, 0)
-        RI_max = torch.where(RIlist[2] > self.hparams.target_intensity, 1, 0)
+        RI_min = torch.where(RIlist[0] > self.hparams.target_intensity, 1, 0).float()
+        RI_norm = torch.where(RIlist[1] > self.hparams.target_intensity, 1, 0).float()
+        RI_max = torch.where(RIlist[2] > self.hparams.target_intensity, 1, 0).float()
         # l2, pvb
         l2 = self.criterion(RI_norm, self.mask.target_data)
         pvb = (self.criterion(RI_norm, RI_min) + self.criterion(RI_norm, RI_max)) * self.mask.target_data.shape[0] * self.mask.target_data.shape[1]
         loss = l2 * self.hparams.weight_l2 + pvb * self.hparams.weight_pvb
+        loss.requires_grad_(True)
         return l2, pvb, loss, AIlist[1], RI_norm
 
     def training_step(self, batch: Any, batch_idx: int) -> torch.Tensor:
@@ -433,7 +436,7 @@ class MOLitModule(LightningModule):
         )
         self.log(
             "simple_s_num",
-            torch.tensor(self.simple_source_value.shape[0]),
+            torch.tensor(self.source_data.shape[0]),
             on_step=False,
             on_epoch=True,
             prog_bar=False,
@@ -446,7 +449,7 @@ class MOLitModule(LightningModule):
         # binary_AI = torch.where(AI.detach() > self.hparams.target_intensity, 1, 0)
         # l2_error = (self.mask.target_data - binary_AI).abs().sum()
         self.log("val/l2", l2_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
-        self.log("val/l2", pvb_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("val/pvb", pvb_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
 
         if self.hparams.visual_in_val:
             if self.global_rank == 0:
@@ -455,12 +458,12 @@ class MOLitModule(LightningModule):
                     aim_images = [
                         aim.Image(transform(i))
                         for i in [
-                            self.source_value.clone().detach(),
+                            self.s.data.clone().detach(),
                             self.mask.data,
                             self.mask.target_data,
                             binary_AI.to(torch.float32),
                             # RI,
-                            AI,
+                            AI.clone().detach(),
                         ]
                     ]
                     self.logger.experiment.track(
