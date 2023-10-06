@@ -21,7 +21,7 @@ mask_sigmoid_steepness: 4
 lens_n_liquid: 1.414
 lens_reduction: 0.25
 
-target_intensity: 0.425
+target_intensity: 0.225
 
 low_light_thres: 0.001
 
