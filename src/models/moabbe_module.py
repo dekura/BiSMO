@@ -145,11 +145,15 @@ class MOLitModule(LightningModule):
             self.mask.target_data = self.mask.data.detach().clone()
 
     def init_mask_params(self) -> None:
-        # learnable
-        # self.mask_params = nn.Parameter(torch.zeros(self.mask.data.shape))
+        # learnable, [-1, 1]
         self.mask_params = nn.Parameter(self.mask.data.float())
-        # self.mask_params.data = self.mask.target_data
-        # self.mask_value = self.mask_params
+        if self.hparams.mask_acti == "sigmoid":
+            self.mask_params.data[torch.where(self.mask.data > 0.5)] = 2 - 0.02
+            self.mask_params.data.sub_(0.99)
+        else:
+            # default sigmoid
+            self.mask_params.data[torch.where(self.mask.data > 0.5)] = 2 - 0.02
+            self.mask_params.data.sub_(0.99)
 
 
     def init_source_params(self) -> None:
@@ -261,7 +265,7 @@ class MOLitModule(LightningModule):
 
         # 1. calculate pupil_fdata
         mask_fvalue = [self.mask_fvalue_min, self.mask_fvalue_norm, self.mask_fvalue_max]
-        for ii in range(3):
+        for fvalue in mask_fvalue:
             intensity2D = torch.zeros(self.mask.target_data.shape, dtype=torch.float32, device=self.device)
             for i in range(self.source_data.shape[0]):
                 rho2 = (
@@ -286,7 +290,7 @@ class MOLitModule(LightningModule):
 
                 # 2. calculate mask
                 valid_mask_fdata = torch.masked_select(
-                    mask_fvalue[ii][self.y1 : self.y2, self.x1 : self.x2], valid_source_mask
+                    fvalue[self.y1 : self.y2, self.x1 : self.x2], valid_source_mask
                 )
 
                 tempHAber = valid_mask_fdata * pupil_fdata
@@ -294,7 +298,7 @@ class MOLitModule(LightningModule):
                 ExyzFrequency = torch.zeros(rho2.shape, dtype=torch.complex64, device=self.device)
                 ExyzFrequency[valid_source_mask] = tempHAber
 
-                e_field = torch.zeros(mask_fvalue[ii].shape, dtype=torch.complex64, device=self.device)
+                e_field = torch.zeros(fvalue.shape, dtype=torch.complex64, device=self.device)
                 e_field[self.y1 : self.y2, self.x1 : self.x2] = ExyzFrequency
 
                 AA = torch.fft.fftshift(torch.fft.ifft2(e_field))
@@ -398,16 +402,22 @@ class MOLitModule(LightningModule):
     
     def model_step(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         AIlist, RIlist = self.litho()
-        # binary RI
-        RI_min = torch.where(RIlist[0] > self.hparams.target_intensity, 1, 0).float()
-        RI_norm = torch.where(RIlist[1] > self.hparams.target_intensity, 1, 0).float()
-        RI_max = torch.where(RIlist[2] > self.hparams.target_intensity, 1, 0).float()
-        # l2, pvb
-        l2 = self.criterion(RI_norm, self.mask.target_data)
-        pvb = (self.criterion(RI_norm, RI_min) + self.criterion(RI_norm, RI_max)) * self.mask.target_data.shape[0] * self.mask.target_data.shape[1]
+        # binary RI, torch.where creates a tensor with require_grad = False
+        RI_min = torch.where(RIlist[0] > self.hparams.target_intensity, 1.0, 0.0).float()
+        RI_norm = torch.where(RIlist[1] > self.hparams.target_intensity, 1.0, 0.0).float()
+        RI_max = torch.where(RIlist[2] > self.hparams.target_intensity, 1.0, 0.0).float()
+        # l2 = 0.0052, pvb = 7e3
+
+        l2 = self.criterion(RIlist[1], self.mask.target_data.float())
+        pvb = (self.criterion(RIlist[1], RIlist[0]) + self.criterion(RIlist[1], RIlist[2])) * self.mask.target_data.shape[0] * self.mask.target_data.shape[1]
         loss = l2 * self.hparams.weight_l2 + pvb * self.hparams.weight_pvb
-        loss.requires_grad_(True)
-        return l2, pvb, loss, AIlist[1], RI_norm
+        
+        l2_val = self.criterion(RI_norm, self.mask.target_data.float())
+        pvb_val = (self.criterion(RI_norm, RI_min) + self.criterion(RI_norm, RI_max)) * self.mask.target_data.shape[0] * self.mask.target_data.shape[1]
+
+        # for training, I use sig(AI) to calculate loss.
+        # for testing and validation, I use real RI to get pvb and l2.
+        return l2_val, pvb_val, loss, AIlist[1], RI_norm
 
     def training_step(self, batch: Any, batch_idx: int) -> torch.Tensor:
         l2, pvb, loss, _, _ = self.model_step()
@@ -436,7 +446,7 @@ class MOLitModule(LightningModule):
         )
         self.log(
             "simple_s_num",
-            torch.tensor(self.source_data.shape[0]),
+            torch.tensor(self.source_data.shape[0]).float(),
             on_step=False,
             on_epoch=True,
             prog_bar=False,

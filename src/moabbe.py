@@ -1,7 +1,7 @@
 """
 Description: MO with Abbe's Approach.
 """
-from typing import List, Tuple
+from typing import Any, List, Dict, Tuple, Optional
 
 import hydra
 import pyrootutils
@@ -35,7 +35,7 @@ log = utils.get_pylogger(__name__)
 
 
 @utils.task_wrapper
-def smo(cfg: DictConfig) -> Tuple[dict, dict]:
+def mo(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
     # assert cfg.ckpt_path
     # TODO What should be assert?
@@ -104,12 +104,12 @@ def smo(cfg: DictConfig) -> Tuple[dict, dict]:
 
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="moabbe.yaml")
-def main(cfg: DictConfig) -> None:
+def main(cfg: DictConfig) -> Optional[float]:
     # apply extra utilities
     # (e.g. ask for tags if none are provided in cfg, print cfg tree, etc.)
     utils.extras(cfg)
 
-    metric_dict, _ = smo(cfg)
+    metric_dict, _ = mo(cfg)
 
     metric_value = utils.get_metric_value(
         metric_dict=metric_dict, metric_name=cfg.get("optimized_metric")

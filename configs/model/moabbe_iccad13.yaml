@@ -27,7 +27,7 @@ low_light_thres: 0.001
 
 resist_sigmoid_steepness: 30
 
-weight_l2: 1.00
-weight_pvb: 1.00
+weight_l2: 1000.0
+weight_pvb: 0.001
 
 save_img_folder: ${paths.data_dir}/soed
