@@ -418,9 +418,9 @@ class MOLitModule(LightningModule):
         loss = l2 * self.hparams.weight_l2 + pvb * self.hparams.weight_pvb
         
         # print('l2', l2, 'pvb', pvb)
-        l2_val = (RI_norm - self.mask.target_data).abs().sum() * self.mask.target_data.shape[0] * self.mask.target_data.shape[1]
-        pvb_val = ((RI_norm - RI_min).abs().sum() + (RI_norm - RI_max).abs().sum()) * self.mask.target_data.shape[0] * self.mask.target_data.shape[1]
-        other_pvb_val = (RI_max - RI_min).abs().sum() * self.mask.target_data.shape[0] * self.mask.target_data.shape[1]
+        l2_val = (RI_norm - self.mask.target_data).abs().sum()
+        pvb_val = (RI_norm - RI_min).abs().sum() + (RI_norm - RI_max).abs().sum()
+        other_pvb_val = (RI_max - RI_min).abs().sum()
         # l2_val = self.criterion(RI_norm, self.mask.target_data.float())
         # pvb_val = (self.criterion(RI_norm, RI_min) + self.criterion(RI_norm, RI_max)) * self.mask.target_data.shape[0] * self.mask.target_data.shape[1]
 
