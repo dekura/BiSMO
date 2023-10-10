@@ -1,0 +1,4 @@
+_target_: src.models.litho.img_mask.Mask
+dataset_name: ibm_opc_test
+layout_path: /home/hehq/project/smo2.0/data/img2013/M1_test7.png
+target_path: /home/hehq/project/smo2.0/data/img2013/M1_test7.png

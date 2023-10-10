@@ -50,6 +50,7 @@ class MOLitModule(LightningModule):
         mask_acti: str = "sigmoid",
         # source_type: str = 'annular',
         mask_sigmoid_steepness: float = 4,
+        mask_sigmoid_tr: float = 0.5,
         # source_sigmoid_steepness: float = 8,
         lens_n_liquid: float = 1.44,
         lens_reduction: float = 0.25,
@@ -57,6 +58,7 @@ class MOLitModule(LightningModule):
         low_light_thres: float = 1e-3,
         visual_in_val: bool = True,
         resist_sigmoid_steepness: float = 30,
+        resist_sigmoid_tr: float = 0.225,
         # resist_tRef: float = 0.12,
         weight_l2: float = 1.00,
         weight_pvb: float = 1.00,
@@ -96,7 +98,7 @@ class MOLitModule(LightningModule):
 
     def sigmoid_resist(self, aerial) -> torch.Tensor:
         return torch.sigmoid(
-            self.hparams.resist_sigmoid_steepness * (aerial - self.hparams.target_intensity)
+            self.hparams.resist_sigmoid_steepness * (aerial - self.hparams.resist_sigmoid_tr)
         )
 
     def init_freq_domain_on_device(self) -> None:
@@ -180,6 +182,10 @@ class MOLitModule(LightningModule):
             self.mask_value = self.sigmoid_mask(
                 self.hparams.mask_sigmoid_steepness * self.mask_params
             )
+        elif self.hparams.mask_acti == 'multi':
+            self.mask_value = self.sigmoid_mask(
+                self.hparams.mask_sigmoid_steepness * (self.mask_params - self.hparams.mask_sigmoid_tr)
+            )
         else:
             self.mask_value = self.sigmoid_mask(
                 self.hparams.mask_sigmoid_steepness * self.mask_params
@@ -223,7 +229,7 @@ class MOLitModule(LightningModule):
         # no aberrations
         return obliquityFactor * (1 + 0j)
 
-    def litho(self) -> tuple[list, list]:
+    def forward(self) -> tuple[list, list]:
         # init source.data
         # if self.hparams.source_type == 'annular':
         #     # (37, 37), where maskxpitch/maskypitch = 1280
@@ -336,7 +342,7 @@ class MOLitModule(LightningModule):
         # we need to move the freq to device
         self.init_freq_domain_on_device()
 
-    def forward(self):
+    def forward_old(self):
         self.update_source_value()
         self.get_valid_source()
         self.get_norm_intensity()
@@ -400,27 +406,30 @@ class MOLitModule(LightningModule):
         # loss.requires_grad_(True)
         return l2, pvb, loss, AI, RIlist[1]
     
-    def model_step(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        AIlist, RIlist = self.litho()
+    def model_step(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        AIlist, RIlist = self.forward()
         # binary RI, torch.where creates a tensor with require_grad = False
         RI_min = torch.where(RIlist[0] > self.hparams.target_intensity, 1.0, 0.0).float()
         RI_norm = torch.where(RIlist[1] > self.hparams.target_intensity, 1.0, 0.0).float()
         RI_max = torch.where(RIlist[2] > self.hparams.target_intensity, 1.0, 0.0).float()
-        # l2 = 0.0052, pvb = 7e3
 
         l2 = self.criterion(RIlist[1], self.mask.target_data.float())
         pvb = (self.criterion(RIlist[1], RIlist[0]) + self.criterion(RIlist[1], RIlist[2])) * self.mask.target_data.shape[0] * self.mask.target_data.shape[1]
         loss = l2 * self.hparams.weight_l2 + pvb * self.hparams.weight_pvb
         
-        l2_val = self.criterion(RI_norm, self.mask.target_data.float())
-        pvb_val = (self.criterion(RI_norm, RI_min) + self.criterion(RI_norm, RI_max)) * self.mask.target_data.shape[0] * self.mask.target_data.shape[1]
+        # print('l2', l2, 'pvb', pvb)
+        l2_val = (RI_norm - self.mask.target_data).abs().sum() * self.mask.target_data.shape[0] * self.mask.target_data.shape[1]
+        pvb_val = ((RI_norm - RI_min).abs().sum() + (RI_norm - RI_max).abs().sum()) * self.mask.target_data.shape[0] * self.mask.target_data.shape[1]
+        other_pvb_val = (RI_max - RI_min).abs().sum() * self.mask.target_data.shape[0] * self.mask.target_data.shape[1]
+        # l2_val = self.criterion(RI_norm, self.mask.target_data.float())
+        # pvb_val = (self.criterion(RI_norm, RI_min) + self.criterion(RI_norm, RI_max)) * self.mask.target_data.shape[0] * self.mask.target_data.shape[1]
 
         # for training, I use sig(AI) to calculate loss.
         # for testing and validation, I use real RI to get pvb and l2.
-        return l2_val, pvb_val, loss, AIlist[1], RI_norm
+        return l2_val, pvb_val, other_pvb_val, loss, AIlist[1], RI_norm
 
     def training_step(self, batch: Any, batch_idx: int) -> torch.Tensor:
-        l2, pvb, loss, _, _ = self.model_step()
+        l2, pvb, other_pvb, loss, _, _ = self.model_step()
 
         # update and log metrics
         self.train_loss(loss)
@@ -428,17 +437,18 @@ class MOLitModule(LightningModule):
             "train/loss", self.train_loss, on_step=False, on_epoch=True, prog_bar=True, logger=True
         )
         # return loss or backpropagation will fail
-        # binary_AI = torch.where(AI.detach() > self.hparams.target_intensity, 1, 0)
-        # l2_error = (self.mask.target_data - binary_AI).abs().sum()
+
         l2_error = l2.detach().clone()
         pvb_error = pvb.detach().clone()
+        other_pvb_error = other_pvb.detach().clone()
         self.log("train/l2", l2_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
         self.log("train/pvb", pvb_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("train/other_pvb", other_pvb_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
         # return {"loss": loss}
         return loss
 
     def validation_step(self, batch: Any, batch_idx: int) -> None:
-        l2, pvb, loss, AI, RI = self.model_step()
+        l2, pvb, other_pvb, loss, AI, RI = self.model_step()
 
         self.val_loss(loss)
         self.log(
@@ -455,11 +465,12 @@ class MOLitModule(LightningModule):
         # for aim logger
         l2_error = l2.detach().clone()
         pvb_error = pvb.detach().clone()
+        other_pvb_error = other_pvb.detach().clone()
         binary_AI = RI.detach().clone()
-        # binary_AI = torch.where(AI.detach() > self.hparams.target_intensity, 1, 0)
         # l2_error = (self.mask.target_data - binary_AI).abs().sum()
         self.log("val/l2", l2_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
         self.log("val/pvb", pvb_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("val/other_pvb", other_pvb_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
 
         if self.hparams.visual_in_val:
             if self.global_rank == 0:
@@ -484,27 +495,33 @@ class MOLitModule(LightningModule):
                     )
 
     def test_step(self, batch: Any, batch_idx: int) -> None:
-        _, _, _, AI, RI = self.model_step()
+        _, _, _, _, AI, RI = self.model_step()
         save_img_folder = Path(self.hparams.save_img_folder) / self.mask.dataset_name
-        AI_folder = save_img_folder / f"moed_AI"
+        AI_folder = save_img_folder / f"AI"
         AI_folder.mkdir(parents=True, exist_ok=True)
         
-        RI_folder = save_img_folder / f"moed_RI"
+        RI_folder = save_img_folder / f"RI"
         RI_folder.mkdir(parents=True, exist_ok=True)
 
-        mask_folder = save_img_folder / f"moed_mask"
-        mask_folder.mkdir(parents=True, exist_ok=True)
+        # mask_folder = save_img_folder / f"mask"
+        # mask_folder.mkdir(parents=True, exist_ok=True)
+
+        masked_folder = save_img_folder / f"masked"
+        masked_folder.mkdir(parents=True, exist_ok=True)
 
         RI_moed = RI.detach().clone()
         AI_moed = AI.detach().clone()
+        masked_moed = torch.where(self.mask_params > 0.0, 1, 0)
 
         AI_moed_path = AI_folder / self.mask.mask_name
         RI_moed_path = RI_folder / self.mask.mask_name
-        mask_path = mask_folder / self.mask.mask_name
+        masked_moed_path = masked_folder / self.mask.mask_name
+        # mask_path = mask_folder / self.mask.mask_name
 
         U.save_image(AI_moed.to(torch.float32), AI_moed_path)
         U.save_image(RI_moed.to(torch.float32), RI_moed_path)
-        U.save_image(self.mask.data, mask_path)
+        U.save_image(masked_moed.to(torch.float32), masked_moed_path)
+        # U.save_image(self.mask.data, mask_path)
 
     def configure_optimizers(self):
         """Choose what optimizers and learning-rate schedulers to use in your optimization.
