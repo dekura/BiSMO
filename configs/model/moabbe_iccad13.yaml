@@ -30,6 +30,6 @@ resist_sigmoid_steepness: 30
 resist_sigmoid_tr: 0.225
 
 weight_l2: 1000.0
-weight_pvb: 0.001
+weight_pvb: 8000.0
 
 save_img_folder: ${paths.data_dir}/moed
