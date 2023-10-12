@@ -230,17 +230,6 @@ class MOLitModule(LightningModule):
         return obliquityFactor * (1 + 0j)
 
     def forward(self) -> tuple[list, list]:
-        # init source.data
-        # if self.hparams.source_type == 'annular':
-        #     # (37, 37), where maskxpitch/maskypitch = 1280
-        #     self.s.data = torch.from_numpy(cv2.imread(filename = 'data/source_gt_1280/annular.png', flags = 0))
-        # elif self.hparams.source_type == 'quasar':
-        #     self.s.data = torch.from_numpy(cv2.imread(filename = 'data/source_gt_1280/quasar.png', flags = 0))
-        # elif self.hparams.source_type == 'dipole':
-        #     self.s.data = torch.from_numpy(cv2.imread(filename = 'data/source_gt_1280/dipole.png', flags = 0))
-        # else:
-        #     self.s.data = torch.from_numpy(cv2.imread(filename = 'data/source_gt_1280/annular.png', flags = 0))
-
         self.update_mask_value()
         # self.source_data is un-learnable
         self.source_data = torch.reshape(self.s.data.float(), (-1, 1))
@@ -301,6 +290,7 @@ class MOLitModule(LightningModule):
 
                 tempHAber = valid_mask_fdata * pupil_fdata
 
+                # 3. calculate intensity
                 ExyzFrequency = torch.zeros(rho2.shape, dtype=torch.complex64, device=self.device)
                 ExyzFrequency[valid_source_mask] = tempHAber
 
@@ -315,13 +305,6 @@ class MOLitModule(LightningModule):
             self.intensity2D_list.append(normed_intensity2D)
             self.RI_list.append(self.sigmoid_resist(normed_intensity2D))
 
-
-        # 3. calculate intensity
-        # self.intensity2D = intensity2D / self.source_weight
-        # self.intensity2D = self.intensity2D / self.norm_Intensity
-        # self.RI = self.sigmoid_resist(self.intensity2D)
-
-        # return self.intensity2D, self.RI
         return self.intensity2D_list, self.RI_list
 
 
@@ -342,94 +325,31 @@ class MOLitModule(LightningModule):
         # we need to move the freq to device
         self.init_freq_domain_on_device()
 
-    def forward_old(self):
-        self.update_source_value()
-        self.get_valid_source()
-        self.get_norm_intensity()
-        # self.update_mask_value()
-        intensity2D = torch.zeros(self.mask.data.shape, dtype=torch.float32, device=self.device)
-
-        # print(self.simple_source_value.shape[0])
-        for i in range(self.simple_source_value.shape[0]):
-            rho2 = (
-                self.mask_fg2m
-                + 2
-                * (
-                    self.simple_source_fx1d[i] * self.mask_fm
-                    + self.simple_source_fy1d[i] * self.mask_gm
-                )
-                + self.simple_source_fxy2[i]
-            )
-
-            valid_source_mask = rho2.le(1)
-            f_calc = (
-                torch.masked_select(self.mask_fm, valid_source_mask) + self.simple_source_fx1d[i]
-            )
-            g_calc = (
-                torch.masked_select(self.mask_gm, valid_source_mask) + self.simple_source_fy1d[i]
-            )
-
-            pupil_fdata = self.cal_pupil(f_calc, g_calc)
-
-            valid_mask_fdata = torch.masked_select(
-                self.mask.fdata[self.y1 : self.y2, self.x1 : self.x2], valid_source_mask
-            )
-
-            tempHAber = valid_mask_fdata * pupil_fdata
-
-            ExyzFrequency = torch.zeros(rho2.shape, dtype=torch.complex64, device=self.device)
-            ExyzFrequency[valid_source_mask] = tempHAber
-
-            e_field = torch.zeros(self.mask.fdata.shape, dtype=torch.complex64, device=self.device)
-            e_field[self.y1 : self.y2, self.x1 : self.x2] = ExyzFrequency
-
-            AA = torch.fft.fftshift(torch.fft.ifft2(e_field))
-            AA = torch.abs(AA * torch.conj(AA))
-            AA = self.simple_source_value[i] * AA
-            intensity2D += AA
-        self.intensity2D = intensity2D / self.source_weight
-        self.intensity2D = self.intensity2D / self.norm_Intensity
-        self.RI = self.sigmoid_resist(self.intensity2D)
-        self.RIlist = []
-        # threshold
-        for ii in range(self.dose_list):
-            resist_t = ii * self.hparams.resist_tRef
-            self.RIlist.append((self.RI >= resist_t).to(torch.float64))
-        return self.intensity2D, self.RI, self.RIlist
-
-    def model_step_old(self):
-        AI, _, RIlist = self.forward()
-        # l2, pvb
-        l2 = self.criterion(RIlist[1], self.mask.target_data)
-        pvb = (self.criterion(RIlist[0], RIlist[1]) + self.criterion(RIlist[2], RIlist[1])) * self.mask.target_data.shape[0] * self.mask.target_data.shape[1]
-        loss = l2 * self.hparams.weight_l2 + pvb * self.hparams.weight_pvb
-        # loss.requires_grad_(True)
-        return l2, pvb, loss, AI, RIlist[1]
-    
-    def model_step(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    def model_step(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         AIlist, RIlist = self.forward()
         # binary RI, torch.where creates a tensor with require_grad = False
         RI_min = torch.where(RIlist[0] > self.hparams.target_intensity, 1.0, 0.0).float()
         RI_norm = torch.where(RIlist[1] > self.hparams.target_intensity, 1.0, 0.0).float()
         RI_max = torch.where(RIlist[2] > self.hparams.target_intensity, 1.0, 0.0).float()
 
+        RI_pvb = torch.where(RI_min != RI_max, 1.0, 0.0).float()
+
         l2 = self.criterion(RIlist[1], self.mask.target_data.float())
-        pvb = (self.criterion(RIlist[1], RIlist[0]) + self.criterion(RIlist[1], RIlist[2])) * self.mask.target_data.shape[0] * self.mask.target_data.shape[1]
+        pvb = self.criterion(RIlist[1], RIlist[0]) + self.criterion(RIlist[1], RIlist[2])
         loss = l2 * self.hparams.weight_l2 + pvb * self.hparams.weight_pvb
         
-        # print('l2', l2, 'pvb', pvb)
+        # l2 in 1e-3, pvb in 1e-5
+        # print(pvb * 8000, l2 * 1000)
         l2_val = (RI_norm - self.mask.target_data).abs().sum()
         pvb_val = (RI_norm - RI_min).abs().sum() + (RI_norm - RI_max).abs().sum()
         other_pvb_val = (RI_max - RI_min).abs().sum()
-        # l2_val = self.criterion(RI_norm, self.mask.target_data.float())
-        # pvb_val = (self.criterion(RI_norm, RI_min) + self.criterion(RI_norm, RI_max)) * self.mask.target_data.shape[0] * self.mask.target_data.shape[1]
 
         # for training, I use sig(AI) to calculate loss.
         # for testing and validation, I use real RI to get pvb and l2.
-        return l2_val, pvb_val, other_pvb_val, loss, AIlist[1], RI_norm
+        return l2_val, pvb_val, other_pvb_val, loss, AIlist[1], RI_norm, RI_pvb
 
     def training_step(self, batch: Any, batch_idx: int) -> torch.Tensor:
-        l2, pvb, other_pvb, loss, _, _ = self.model_step()
+        l2, pvb, other_pvb, loss, _, _, _ = self.model_step()
 
         # update and log metrics
         self.train_loss(loss)
@@ -448,7 +368,7 @@ class MOLitModule(LightningModule):
         return loss
 
     def validation_step(self, batch: Any, batch_idx: int) -> None:
-        l2, pvb, other_pvb, loss, AI, RI = self.model_step()
+        l2, pvb, other_pvb, loss, AI, RI, RI_pvb = self.model_step()
 
         self.val_loss(loss)
         self.log(
@@ -467,7 +387,8 @@ class MOLitModule(LightningModule):
         pvb_error = pvb.detach().clone()
         other_pvb_error = other_pvb.detach().clone()
         binary_AI = RI.detach().clone()
-        # l2_error = (self.mask.target_data - binary_AI).abs().sum()
+        vis_pvb = RI_pvb.detach().clone()
+
         self.log("val/l2", l2_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
         self.log("val/pvb", pvb_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
         self.log("val/other_pvb", other_pvb_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
@@ -484,6 +405,7 @@ class MOLitModule(LightningModule):
                             self.mask.target_data,
                             binary_AI.to(torch.float32),
                             # RI,
+                            vis_pvb,
                             AI.clone().detach(),
                         ]
                     ]
@@ -495,7 +417,7 @@ class MOLitModule(LightningModule):
                     )
 
     def test_step(self, batch: Any, batch_idx: int) -> None:
-        _, _, _, _, AI, RI = self.model_step()
+        _, _, _, _, AI, RI, RI_pvb = self.model_step()
         save_img_folder = Path(self.hparams.save_img_folder) / self.mask.dataset_name
         AI_folder = save_img_folder / f"AI"
         AI_folder.mkdir(parents=True, exist_ok=True)
@@ -506,20 +428,26 @@ class MOLitModule(LightningModule):
         # mask_folder = save_img_folder / f"mask"
         # mask_folder.mkdir(parents=True, exist_ok=True)
 
+        pvb_folder = save_img_folder / f"pvb"
+        pvb_folder.mkdir(parents=True, exist_ok=True)
+
         masked_folder = save_img_folder / f"masked"
         masked_folder.mkdir(parents=True, exist_ok=True)
 
         RI_moed = RI.detach().clone()
         AI_moed = AI.detach().clone()
-        masked_moed = torch.where(self.mask_params > 0.0, 1, 0)
+        RI_pvb_moed = RI_pvb.detach().clone()
+        masked_moed = torch.where(self.mask_params > 0.5, 1, 0)
 
         AI_moed_path = AI_folder / self.mask.mask_name
         RI_moed_path = RI_folder / self.mask.mask_name
+        RI_pvb_moed_path = pvb_folder / self.mask.mask_name
         masked_moed_path = masked_folder / self.mask.mask_name
         # mask_path = mask_folder / self.mask.mask_name
 
         U.save_image(AI_moed.to(torch.float32), AI_moed_path)
         U.save_image(RI_moed.to(torch.float32), RI_moed_path)
+        U.save_image(RI_pvb_moed.to(torch.float32), RI_pvb_moed_path)
         U.save_image(masked_moed.to(torch.float32), masked_moed_path)
         # U.save_image(self.mask.data, mask_path)
 
