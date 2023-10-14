@@ -52,6 +52,7 @@ class SOLitModule(LightningModule):
         # mask_sigmoid_steepness: float = 4,
         # mask_sigmoid_tr: float = 0.5,
         source_sigmoid_steepness: float = 8,
+        source_sigmoid_tr: float = 0.225,
         lens_n_liquid: float = 1.44,
         lens_reduction: float = 0.25,
         target_intensity: float = 0.425,
@@ -59,7 +60,6 @@ class SOLitModule(LightningModule):
         visual_in_val: bool = True,
         resist_sigmoid_steepness: float = 30,
         resist_sigmoid_tr: float = 0.225,
-        # resist_tRef: float = 0.12,
         weight_l2: float = 1000.00,
         weight_pvb: float = 8000.00,
         save_img_folder: str = "./data/soed",
@@ -200,7 +200,7 @@ class SOLitModule(LightningModule):
             self.source_value = (1 + torch.cos(self.source_params)) / 2
         elif self.hparams.source_acti == "sigmoid":
             self.source_value = self.sigmoid_source(
-                self.hparams.source_sigmoid_steepness * self.source_params
+                self.hparams.source_sigmoid_steepness * (self.source_params - self.hparams.source_sigmoid_tr)
             )
         else:
             self.source_value = (1 + torch.cos(self.source_params)) / 2
