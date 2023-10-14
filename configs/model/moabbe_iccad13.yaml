@@ -14,7 +14,7 @@ scheduler:
   patience: 20
 
 # choose from cosine | sigmoid
-mask_acti: multi
+mask_acti: sigmoid
 mask_sigmoid_steepness: 12
 mask_sigmoid_tr: 0.0
 
@@ -22,12 +22,12 @@ mask_sigmoid_tr: 0.0
 lens_n_liquid: 1.414
 lens_reduction: 0.25
 
-target_intensity: 0.5
+
 
 low_light_thres: 0.001
 
 resist_sigmoid_steepness: 30
-resist_sigmoid_tr: 0.225
+resist_intensity: 0.225
 
 weight_l2: 1000.0
 weight_pvb: 8000.0
