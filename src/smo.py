@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-03-23 14:56:21
-LastEditTime: 2023-04-28 02:04:22
+LastEditTime: 2023-10-05 12:35:19
 Contact: cgjcuhk@gmail.com
 Description: Litho Main Function
 """
@@ -11,7 +11,6 @@ from typing import List, Tuple
 import hydra
 import pyrootutils
 import torch
-torch.set_num_threads(128)
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig
@@ -53,6 +52,11 @@ def smo(cfg: DictConfig) -> Tuple[dict, dict]:
     Returns:
         Tuple[dict, dict]: Dict with metrics and dict with all instantiated objects.
     """
+
+    # test cpu num threads
+    if cfg.get("num_threads"):
+        log.info(f"set cpu threads to {cfg.num_threads}.")
+        torch.set_num_threads(int(cfg.num_threads))
 
     # assert cfg.ckpt_path
     # TODO What should be assert?

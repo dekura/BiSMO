@@ -39,3 +39,5 @@ ckpt_path: null
 seed: null
 
 inference: True
+
+num_threads: 128
