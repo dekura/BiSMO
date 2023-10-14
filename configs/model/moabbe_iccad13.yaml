@@ -14,15 +14,15 @@ scheduler:
   patience: 20
 
 # choose from cosine | sigmoid
-mask_acti: sigmoid
-mask_sigmoid_steepness: 4
+mask_acti: multi
+mask_sigmoid_steepness: 12
 mask_sigmoid_tr: 0.0
 
 # parameters for lens in SMO model
 lens_n_liquid: 1.414
 lens_reduction: 0.25
 
-target_intensity: 0.225
+target_intensity: 0.5
 
 low_light_thres: 0.001
 
@@ -32,4 +32,4 @@ resist_sigmoid_tr: 0.225
 weight_l2: 1000.0
 weight_pvb: 8000.0
 
-save_img_folder: ${paths.data_dir}/moed
+save_img_folder: ${paths.output_dir}/moed
