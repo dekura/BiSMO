@@ -1,25 +1,24 @@
-[tool.pytest.ini_options]
-addopts = [
-  "--color=yes",
-  "--durations=0",
-  "--strict-markers",
-  "--doctest-modules",
-]
-filterwarnings = [
-  "ignore::DeprecationWarning",
-  "ignore::UserWarning",
-]
-log_cli = "True"
-markers = [
-  "slow: slow tests",
-]
-minversion = "6.0"
-testpaths = "tests/"
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
 
-[tool.coverage.report]
-exclude_lines = [
-    "pragma: nocover",
-    "raise NotImplementedError",
-    "raise NotImplementedError()",
-    "if __name__ == .__main__.:",
+[project]
+name = "betty-ml"
+authors = [{name = "Sang Keun Choe", email = "sangkeun00@gmail.com"}]
+readme = "README.md"
+license = {file = "LICENSE"}
+classifiers = ["License :: OSI Approved :: Apache Software License"]
+dynamic = ["version", "description"]
+
+requires-python = ">=3.6,<3.11"
+
+dependencies = [
+    "torch>=1.8.0",
+    "numpy>=1.9.0",
 ]
+
+[tool.flit.module]
+name = "betty"
+
+[project.urls]
+Home = "https://github.com/leopard-ai/betty"
