@@ -432,24 +432,24 @@ class SOLitModule(LightningModule):
         pvb_folder = save_img_folder / f"pvb"
         pvb_folder.mkdir(parents=True, exist_ok=True)
 
-        masked_folder = save_img_folder / f"masked"
-        masked_folder.mkdir(parents=True, exist_ok=True)
+        source_folder = save_img_folder / f"source"
+        source_folder.mkdir(parents=True, exist_ok=True)
 
-        RI_moed = RI.detach().clone()
-        AI_moed = AI.detach().clone()
-        RI_pvb_moed = RI_pvb.detach().clone()
-        masked_moed = torch.where(self.mask_params > 0.5, 1, 0)
+        RI_soed = RI.detach().clone()
+        AI_soed = AI.detach().clone()
+        RI_pvb_soed = RI_pvb.detach().clone()
+        sourece = torch.where(self.source_params > 0., 1, 0)
 
-        AI_moed_path = AI_folder / self.mask.mask_name
-        RI_moed_path = RI_folder / self.mask.mask_name
-        RI_pvb_moed_path = pvb_folder / self.mask.mask_name
-        masked_moed_path = masked_folder / self.mask.mask_name
+        AI_soed_path = AI_folder / self.mask.mask_name
+        RI_soed_path = RI_folder / self.mask.mask_name
+        RI_pvb_soed_path = pvb_folder / self.mask.mask_name
+        source_soed_path = source_folder / self.mask.mask_name
         # mask_path = mask_folder / self.mask.mask_name
 
-        U.save_image(AI_moed.to(torch.float32), AI_moed_path)
-        U.save_image(RI_moed.to(torch.float32), RI_moed_path)
-        U.save_image(RI_pvb_moed.to(torch.float32), RI_pvb_moed_path)
-        U.save_image(masked_moed.to(torch.float32), masked_moed_path)
+        U.save_image(AI_soed.to(torch.float32), AI_soed_path)
+        U.save_image(RI_soed.to(torch.float32), RI_soed_path)
+        U.save_image(RI_pvb_soed.to(torch.float32), RI_pvb_soed_path)
+        U.save_image(sourece.to(torch.float32), source_soed_path)
         # U.save_image(self.mask.data, mask_path)
 
     def configure_optimizers(self):

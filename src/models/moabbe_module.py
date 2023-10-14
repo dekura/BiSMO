@@ -437,7 +437,7 @@ class MOLitModule(LightningModule):
         RI_moed = RI.detach().clone()
         AI_moed = AI.detach().clone()
         RI_pvb_moed = RI_pvb.detach().clone()
-        masked_moed = torch.where(self.mask_params > 0.5, 1, 0)
+        masked_moed = torch.where(self.mask_value > 0.5, 1, 0)
 
         AI_moed_path = AI_folder / self.mask.mask_name
         RI_moed_path = RI_folder / self.mask.mask_name
