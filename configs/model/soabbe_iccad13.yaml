@@ -16,18 +16,15 @@ scheduler:
 # choose from cosine | sigmoid
 source_acti: sigmoid
 source_sigmoid_steepness: 12
-source_sigmoid_tr: 0.0
 
 # parameters for lens in SMO model
 lens_n_liquid: 1.414
 lens_reduction: 0.25
 
-resist_intensity: 0.5
-
 low_light_thres: 0.001
 
 resist_sigmoid_steepness: 30
-resist_intensity: 0.5
+resist_intensity: 0.225
 
 weight_l2: 1000.0
 weight_pvb: 8000.0

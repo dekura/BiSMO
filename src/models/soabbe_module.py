@@ -47,19 +47,14 @@ class SOLitModule(LightningModule):
         scheduler: torch.optim.lr_scheduler,
         dose_list: list = [0.98, 1.00, 1.02],
         source_acti: str = "sigmoid",
-        # mask_acti: str = "sigmoid",
         source_type: str = 'annular',
-        # mask_sigmoid_steepness: float = 4,
-        # mask_sigmoid_tr: float = 0.5,
         source_sigmoid_steepness: float = 8,
-        source_sigmoid_tr: float = 0.225,
         lens_n_liquid: float = 1.44,
         lens_reduction: float = 0.25,
-        target_intensity: float = 0.425,
+        resist_intensity: float = 0.225,
         low_light_thres: float = 1e-3,
         visual_in_val: bool = True,
         resist_sigmoid_steepness: float = 30,
-        resist_sigmoid_tr: float = 0.225,
         weight_l2: float = 1000.00,
         weight_pvb: float = 8000.00,
         save_img_folder: str = "./data/soed",
@@ -89,16 +84,14 @@ class SOLitModule(LightningModule):
         self.val_loss = MeanMetric()
 
         # activation
-        self.sigmoid_mask = nn.Sigmoid()
         self.sigmoid_source = nn.Sigmoid()
 
         # init
         self.init_source_params()
-        # self.init_mask_params()
 
     def sigmoid_resist(self, aerial) -> torch.Tensor:
         return torch.sigmoid(
-            self.hparams.resist_sigmoid_steepness * (aerial - self.hparams.resist_sigmoid_tr)
+            self.hparams.resist_sigmoid_steepness * (aerial - self.hparams.resist_intensity)
         )
 
     def init_freq_domain_on_device(self) -> None:
@@ -146,21 +139,8 @@ class SOLitModule(LightningModule):
         else:
             self.mask.target_data = self.mask.data.detach().clone()
 
-    def init_mask_params(self) -> None:
-        # learnable, [-1, 1]
-        self.mask_params = nn.Parameter(self.mask.data.float())
-        if self.hparams.mask_acti == "sigmoid":
-            self.mask_params.data[torch.where(self.mask.data > 0.5)] = 2 - 0.02
-            self.mask_params.data.sub_(0.99)
-        else:
-            # default sigmoid
-            self.mask_params.data[torch.where(self.mask.data > 0.5)] = 2 - 0.02
-            self.mask_params.data.sub_(0.99)
-
-
     def init_source_params(self) -> None:
         # [-1, 1]
-        # self.source_params = nn.Parameter(torch.zeros(self.s.data.shape))
         self.source_params = nn.Parameter(self.s.data.float())
 
         # for sigmoid
@@ -176,44 +156,15 @@ class SOLitModule(LightningModule):
             self.source_params.data[torch.where(self.s.data <= 0.5)] = torch.pi - 0.1
 
 
-    def update_mask_value(self) -> None:
-        if self.hparams.mask_acti == 'sigmoid':
-            # mask after activation func
-            self.mask_value = self.sigmoid_mask(
-                self.hparams.mask_sigmoid_steepness * self.mask_params
-            )
-        elif self.hparams.mask_acti == 'multi':
-            self.mask_value = self.sigmoid_mask(
-                self.hparams.mask_sigmoid_steepness * (self.mask_params - self.hparams.mask_sigmoid_tr)
-            )
-        else:
-            self.mask_value = self.sigmoid_mask(
-                self.hparams.mask_sigmoid_steepness * self.mask_params
-            )
-        # self.mask.maskfft()
-        self.mask_fvalue_min = torch.fft.fftshift(torch.fft.fft2(torch.fft.ifftshift(self.mask_value * self.dose_list[0])))
-        self.mask_fvalue_norm = torch.fft.fftshift(torch.fft.fft2(torch.fft.ifftshift(self.mask_value * self.dose_list[1])))
-        self.mask_fvalue_max = torch.fft.fftshift(torch.fft.fft2(torch.fft.ifftshift(self.mask_value * self.dose_list[2])))
-
     def update_source_value(self) -> None:
         if self.hparams.source_acti == "cosine":
             self.source_value = (1 + torch.cos(self.source_params)) / 2
         elif self.hparams.source_acti == "sigmoid":
             self.source_value = self.sigmoid_source(
-                self.hparams.source_sigmoid_steepness * (self.source_params - self.hparams.source_sigmoid_tr)
+                self.hparams.source_sigmoid_steepness * self.source_params
             )
         else:
             self.source_value = (1 + torch.cos(self.source_params)) / 2
-
-    def get_valid_source(self) -> None:
-        self.simple_source_value = torch.reshape(self.source_value, (-1, 1))
-        high_light_mask = self.simple_source_value.ge(self.hparams.low_light_thres)
-
-        self.simple_source_value = torch.masked_select(self.simple_source_value, high_light_mask)
-        self.simple_source_fx1d = torch.masked_select(self.source_fx1d, high_light_mask)
-        self.simple_source_fy1d = torch.masked_select(self.source_fy1d, high_light_mask)
-        self.simple_source_fxy2 = self.simple_source_fx1d.pow(2) + self.simple_source_fy1d.pow(2)
-        self.source_weight = torch.sum(self.simple_source_value)
 
     def cal_pupil(self, FX, FY) -> torch.Tensor:
         R = torch.sqrt(FX**2 + FY**2)  # rho
@@ -231,6 +182,7 @@ class SOLitModule(LightningModule):
 
     def forward(self) -> tuple[list, list]:
         self.update_source_value()
+        # get_valid_source
         self.source_data = torch.reshape(self.source_value, (-1, 1))
         high_light_mask = self.source_data.ge(self.hparams.low_light_thres)
 
@@ -258,7 +210,7 @@ class SOLitModule(LightningModule):
         self.RI_list = []
 
         # 1. calculate pupil_fdata
-        self.mask_fvalue_max = torch.fft.fftshift(torch.fft.fft2(torch.fft.ifftshift(self.mask.data.float() * self.dose_list[0])))
+        self.mask_fvalue_min = torch.fft.fftshift(torch.fft.fft2(torch.fft.ifftshift(self.mask.data.float() * self.dose_list[0])))
         self.mask_fvalue_norm = torch.fft.fftshift(torch.fft.fft2(torch.fft.ifftshift(self.mask.data.float() * self.dose_list[1])))
         self.mask_fvalue_max = torch.fft.fftshift(torch.fft.fft2(torch.fft.ifftshift(self.mask.data.float() * self.dose_list[2])))
         mask_fvalue = [self.mask_fvalue_min, self.mask_fvalue_norm, self.mask_fvalue_max]
@@ -309,20 +261,6 @@ class SOLitModule(LightningModule):
 
         return self.intensity2D_list, self.RI_list
 
-
-    def get_norm_intensity(self) -> None:
-        norm_pupil_fdata = self.cal_pupil(self.simple_source_fx1d, self.simple_source_fy1d)
-        norm_tempHAber = self.norm_spectrum_calc * norm_pupil_fdata
-        norm_ExyzFrequency = norm_tempHAber.view(-1, 1)
-        norm_Exyz = torch.fft.fftshift(torch.fft.fft(norm_ExyzFrequency))
-        norm_IntensityCon = torch.abs(norm_Exyz * torch.conj(norm_Exyz))
-        norm_total_intensity = torch.matmul(
-            self.simple_source_value.view(-1, 1).T, norm_IntensityCon
-        )
-        norm_IntensityTemp = self.hparams.lens_n_liquid * (self.dfmdg**2) * norm_total_intensity
-        norm_Intensity = norm_IntensityTemp / self.source_weight
-        self.norm_Intensity = norm_Intensity.detach()
-
     def on_fit_start(self) -> None:
         # we need to move the freq to device
         self.init_freq_domain_on_device()
@@ -330,9 +268,9 @@ class SOLitModule(LightningModule):
     def model_step(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         AIlist, RIlist = self.forward()
         # binary RI, torch.where creates a tensor with require_grad = False
-        RI_min = torch.where(RIlist[0] > self.hparams.target_intensity, 1.0, 0.0).float()
-        RI_norm = torch.where(RIlist[1] > self.hparams.target_intensity, 1.0, 0.0).float()
-        RI_max = torch.where(RIlist[2] > self.hparams.target_intensity, 1.0, 0.0).float()
+        RI_min = torch.where(RIlist[0] > 0.5, 1.0, 0.0).float()
+        RI_norm = torch.where(RIlist[1] > 0.5, 1.0, 0.0).float()
+        RI_max = torch.where(RIlist[2] > 0.5, 1.0, 0.0).float()
 
         RI_pvb = torch.where(RI_min != RI_max, 1.0, 0.0).float()
 
