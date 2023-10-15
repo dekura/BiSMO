@@ -325,8 +325,6 @@ class SOLitModule(LightningModule):
         l2_error = l2.detach().clone()
         pvb_error = pvb.detach().clone()
         other_pvb_error = other_pvb.detach().clone()
-        binary_AI = RI.detach().clone()
-        vis_pvb = RI_pvb.detach().clone()
 
         self.log("val/l2", l2_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
         self.log("val/pvb", pvb_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
@@ -340,11 +338,9 @@ class SOLitModule(LightningModule):
                         aim.Image(transform(i))
                         for i in [
                             self.s.data.clone().detach(),
-                            self.mask.data,
-                            self.mask.target_data,
-                            binary_AI.to(torch.float32),
-                            # RI,
-                            vis_pvb,
+                            self.mask.target_data.clone().detach(),
+                            RI.detach().clone(),
+                            RI_pvb.detach().clone(),
                             AI.clone().detach(),
                         ]
                     ]
@@ -376,7 +372,7 @@ class SOLitModule(LightningModule):
         RI_soed = RI.detach().clone()
         AI_soed = AI.detach().clone()
         RI_pvb_soed = RI_pvb.detach().clone()
-        sourece = torch.where(self.source_params > 0., 1, 0)
+        sourece = torch.where(self.source_value > 0., 1, 0)
 
         AI_soed_path = AI_folder / self.mask.mask_name
         RI_soed_path = RI_folder / self.mask.mask_name
