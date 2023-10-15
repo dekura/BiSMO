@@ -55,11 +55,10 @@ class SMOLitModule(LightningModule):
         source_sigmoid_steepness: float = 8,
         lens_n_liquid: float = 1.44,
         lens_reduction: float = 0.25,
-        target_intensity: float = 0.425,
+        resist_intensity: float = 0.225,
         low_light_thres: float = 1e-3,
         visual_in_val: bool = True,
         resist_sigmoid_steepness: float = 30,
-        resist_sigmoid_tr: float = 0.225,
         weight_l2: float = 1000.00,
         weight_pvb: float = 8000.00,
         save_img_folder: str = "./data/smoed",
@@ -98,7 +97,7 @@ class SMOLitModule(LightningModule):
 
     def sigmoid_resist(self, aerial) -> torch.Tensor:
         return torch.sigmoid(
-            self.hparams.resist_sigmoid_steepness * (aerial - self.hparams.resist_sigmoid_tr)
+            self.hparams.resist_sigmoid_steepness * (aerial - self.hparams.resist_intensity)
         )
 
     def init_freq_domain_on_device(self) -> None:
@@ -203,16 +202,6 @@ class SMOLitModule(LightningModule):
         else:
             self.source_value = (1 + torch.cos(self.source_params)) / 2
 
-    def get_valid_source(self) -> None:
-        self.simple_source_value = torch.reshape(self.source_value, (-1, 1))
-        high_light_mask = self.simple_source_value.ge(self.hparams.low_light_thres)
-
-        self.simple_source_value = torch.masked_select(self.simple_source_value, high_light_mask)
-        self.simple_source_fx1d = torch.masked_select(self.source_fx1d, high_light_mask)
-        self.simple_source_fy1d = torch.masked_select(self.source_fy1d, high_light_mask)
-        self.simple_source_fxy2 = self.simple_source_fx1d.pow(2) + self.simple_source_fy1d.pow(2)
-        self.source_weight = torch.sum(self.simple_source_value)
-
     def cal_pupil(self, FX, FY) -> torch.Tensor:
         R = torch.sqrt(FX**2 + FY**2)  # rho
         fgSquare = torch.square(R)
@@ -306,20 +295,6 @@ class SMOLitModule(LightningModule):
 
         return self.intensity2D_list, self.RI_list
 
-
-    def get_norm_intensity(self) -> None:
-        norm_pupil_fdata = self.cal_pupil(self.simple_source_fx1d, self.simple_source_fy1d)
-        norm_tempHAber = self.norm_spectrum_calc * norm_pupil_fdata
-        norm_ExyzFrequency = norm_tempHAber.view(-1, 1)
-        norm_Exyz = torch.fft.fftshift(torch.fft.fft(norm_ExyzFrequency))
-        norm_IntensityCon = torch.abs(norm_Exyz * torch.conj(norm_Exyz))
-        norm_total_intensity = torch.matmul(
-            self.simple_source_value.view(-1, 1).T, norm_IntensityCon
-        )
-        norm_IntensityTemp = self.hparams.lens_n_liquid * (self.dfmdg**2) * norm_total_intensity
-        norm_Intensity = norm_IntensityTemp / self.source_weight
-        self.norm_Intensity = norm_Intensity.detach()
-
     def on_fit_start(self) -> None:
         # we need to move the freq to device
         self.init_freq_domain_on_device()
@@ -327,9 +302,9 @@ class SMOLitModule(LightningModule):
     def model_step(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         AIlist, RIlist = self.forward()
         # binary RI, torch.where creates a tensor with require_grad = False
-        RI_min = torch.where(RIlist[0] > self.hparams.target_intensity, 1.0, 0.0).float()
-        RI_norm = torch.where(RIlist[1] > self.hparams.target_intensity, 1.0, 0.0).float()
-        RI_max = torch.where(RIlist[2] > self.hparams.target_intensity, 1.0, 0.0).float()
+        RI_min = torch.where(RIlist[0] > 0.5, 1.0, 0.0).float()
+        RI_norm = torch.where(RIlist[1] > 0.5, 1.0, 0.0).float()
+        RI_max = torch.where(RIlist[2] > 0.5, 1.0, 0.0).float()
 
         RI_pvb = torch.where(RI_min != RI_max, 1.0, 0.0).float()
 
@@ -338,7 +313,6 @@ class SMOLitModule(LightningModule):
         loss = l2 * self.hparams.weight_l2 + pvb * self.hparams.weight_pvb
         
         # l2 in 1e-3, pvb in 1e-5
-        # print(pvb * 8000, l2 * 1000)
         l2_val = (RI_norm - self.mask.target_data).abs().sum()
         pvb_val = (RI_norm - RI_min).abs().sum() + (RI_norm - RI_max).abs().sum()
         other_pvb_val = (RI_max - RI_min).abs().sum()
@@ -430,24 +404,30 @@ class SMOLitModule(LightningModule):
         pvb_folder = save_img_folder / f"pvb"
         pvb_folder.mkdir(parents=True, exist_ok=True)
 
+        source_folder = save_img_folder / f"source"
+        source_folder.mkdir(parents=True, exist_ok=True)
+
         masked_folder = save_img_folder / f"masked"
         masked_folder.mkdir(parents=True, exist_ok=True)
 
-        RI_moed = RI.detach().clone()
-        AI_moed = AI.detach().clone()
-        RI_pvb_moed = RI_pvb.detach().clone()
-        masked_moed = torch.where(self.mask_value > 0.5, 1, 0)
+        RI_smoed = RI.detach().clone()
+        AI_smoed = AI.detach().clone()
+        RI_pvb_smoed = RI_pvb.detach().clone()
+        masked_smoed = torch.where(self.mask_value > 0.5, 1, 0)
+        sourece = torch.where(self.source_params > 0., 1, 0)
 
-        AI_moed_path = AI_folder / self.mask.mask_name
-        RI_moed_path = RI_folder / self.mask.mask_name
-        RI_pvb_moed_path = pvb_folder / self.mask.mask_name
-        masked_moed_path = masked_folder / self.mask.mask_name
+        AI_smoed_path = AI_folder / self.mask.mask_name
+        RI_smoed_path = RI_folder / self.mask.mask_name
+        RI_pvb_smoed_path = pvb_folder / self.mask.mask_name
+        masked_smoed_path = masked_folder / self.mask.mask_name
+        source_smoed_path = source_folder / self.mask.mask_name
         # mask_path = mask_folder / self.mask.mask_name
 
-        U.save_image(AI_moed.to(torch.float32), AI_moed_path)
-        U.save_image(RI_moed.to(torch.float32), RI_moed_path)
-        U.save_image(RI_pvb_moed.to(torch.float32), RI_pvb_moed_path)
-        U.save_image(masked_moed.to(torch.float32), masked_moed_path)
+        U.save_image(AI_smoed.to(torch.float32), AI_smoed_path)
+        U.save_image(RI_smoed.to(torch.float32), RI_smoed_path)
+        U.save_image(RI_pvb_smoed.to(torch.float32), RI_pvb_smoed_path)
+        U.save_image(masked_smoed.to(torch.float32), masked_smoed_path)
+        U.save_image(sourece.to(torch.float32), source_smoed_path)
         # U.save_image(self.mask.data, mask_path)
 
     def configure_optimizers(self):

@@ -13,7 +13,7 @@ for type in $source_list; do
                 for l in $(seq 1 10); do
                     layout_path="/home/hehq/project/smo2.0/data/img2013/M1_test"$l".png"
                     echo "Starting so for: "$source_sigmoid_steepness $resist_sigmoid_steepness $weight_pvb
-                    $python src/soabbe.py task_name="so_mss"$source_sigmoid_steepness"rss"$resist_sigmoid_steepness"pvb"$weight_pvb mask.layout_path=$layout_path mask.target_path=$layout_path source.source_type=$type model.mask_sigmoid_steepness=$mask_sigmoid_steepness model.resist_sigmoid_steepness=$resist_sigmoid_steepness model.weight_pvb=$weight_pvb
+                    $python src/soabbe.py task_name="so_sss"$source_sigmoid_steepness"rss"$resist_sigmoid_steepness"pvb"$weight_pvb mask.layout_path=$layout_path mask.target_path=$layout_path source.source_type=$type model.source_sigmoid_steepness=$source_sigmoid_steepness model.resist_sigmoid_steepness=$resist_sigmoid_steepness model.weight_pvb=$weight_pvb
                 done
             done
         done
