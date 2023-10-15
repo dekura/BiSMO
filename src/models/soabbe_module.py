@@ -330,6 +330,8 @@ class SOLitModule(LightningModule):
         self.log("val/pvb", pvb_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
         self.log("val/other_pvb", other_pvb_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
 
+        sourece = torch.where(self.source_value > 0., 1, 0).float()
+
         if self.hparams.visual_in_val:
             if self.global_rank == 0:
                 if isinstance(self.logger, AimLogger):
@@ -338,6 +340,7 @@ class SOLitModule(LightningModule):
                         aim.Image(transform(i))
                         for i in [
                             self.s.data.clone().detach(),
+                            sourece.detach().clone(),
                             self.mask.target_data.clone().detach(),
                             RI.detach().clone(),
                             RI_pvb.detach().clone(),
