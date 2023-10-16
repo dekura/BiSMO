@@ -279,6 +279,7 @@ class SOLitModule(LightningModule):
         loss = l2 * self.hparams.weight_l2 + pvb * self.hparams.weight_pvb
         
         # l2 in 1e-3, pvb in 1e-5
+        # print('l2', l2 * 1000,'pvb', pvb * 50000)
         l2_val = (RI_norm - self.mask.target_data).abs().sum()
         pvb_val = (RI_norm - RI_min).abs().sum() + (RI_norm - RI_max).abs().sum()
         other_pvb_val = (RI_max - RI_min).abs().sum()
@@ -330,7 +331,7 @@ class SOLitModule(LightningModule):
         self.log("val/pvb", pvb_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
         self.log("val/other_pvb", other_pvb_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
 
-        sourece = torch.where(self.source_value > 0., 1, 0).float()
+        sourece = torch.where(self.source_value > 0.5, 1.0, 0.0).float()
 
         if self.hparams.visual_in_val:
             if self.global_rank == 0:
@@ -375,7 +376,7 @@ class SOLitModule(LightningModule):
         RI_soed = RI.detach().clone()
         AI_soed = AI.detach().clone()
         RI_pvb_soed = RI_pvb.detach().clone()
-        sourece = torch.where(self.source_value > 0., 1, 0)
+        sourece = torch.where(self.source_value > 0.5, 1.0, 0.0).float()
 
         AI_soed_path = AI_folder / self.mask.mask_name
         RI_soed_path = RI_folder / self.mask.mask_name
