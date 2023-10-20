@@ -332,3 +332,14 @@ class SO(ImplicitProblem):
     def configure_optimizer(self):
         return torch.optim.Adam(self.module.parameters(), lr=0.1)
 
+mo_module = MO()
+so_module = SO()
+
+problems = [mo_module, so_module]
+u2l = {mo_module: [so_module]}
+l2u = {so_module: [mo_module]}
+dependencies = {"l2u": l2u, "u2l": u2l}
+
+engine_config = EngineConfig(train_iters=10000, logger_type="none")
+engine = Engine(config=engine_config, problems=problems, dependencies=dependencies)
+engine.run()
