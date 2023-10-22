@@ -1,0 +1,13 @@
+outer:
+  _target_: betty.configs.Config
+  type: darts
+  retain_graph: True
+
+inner:
+  _target_: betty.configs.Config
+  type: darts
+  unroll_steps: 1
+
+engine:
+  _target_: betty.configs.EngineConfig
+  train_iters: 1000

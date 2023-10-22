@@ -1,0 +1,57 @@
+mo:
+  _target_: src.problems.mo.MO
+  # _partial_: true
+  name: "MO"
+
+  config:
+    _target_: betty.configs.Config
+    type: darts
+    retain_graph: True
+    # gradient_accumulation: 4
+    # precision: fp16
+
+  optimizer_cfg:
+    _target_: torch.optim.Adam
+    _partial_: true
+    lr: 0.01
+    weight_decay: 0.0
+
+  # scheduler_cfg:
+  #   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  #   _partial_: true
+  #   mode: min
+  #   factor: 0.1
+  #   patience: 20
+
+  weight_l2: 1000
+  weight_pvb: 8000
+
+
+so:
+  _target_: src.problems.so.SO
+  # _partial_: true
+  name: "SO"
+
+  config:
+    _target_: betty.configs.Config
+    type: darts
+    unroll_steps: 1
+    # gradient_accumulation: 4
+    # precision: fp16
+
+
+  optimizer_cfg:
+    _target_: torch.optim.Adam
+    _partial_: true
+    lr: 0.01
+    weight_decay: 0.0
+
+  # scheduler_cfg:
+  #   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  #   _partial_: true
+  #   mode: min
+  #   factor: 0.1
+  #   patience: 20
+
+  weight_l2: 1000
+  weight_pvb: 8000

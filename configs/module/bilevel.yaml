@@ -1,0 +1,5 @@
+mo:
+  _target_: src.models.mo_module.MO_Module
+
+so:
+  _target_: src.models.so_module.SO_Module

@@ -155,3 +155,4 @@ configs/local/default.yaml
 
 
 **.DS_Store
+/data/MNIST
