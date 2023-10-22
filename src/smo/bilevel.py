@@ -15,7 +15,6 @@ import sys
 sys.path.append('.')
 
 import torch
-import torch.nn.functional as F
 from torch import optim
 
 from betty.engine import Engine
@@ -41,7 +40,8 @@ mo_module = MO(source, mask)
 mo_opt = optim.Adam(
     mo_module.parameters(), 
     lr = 0.01, 
-    betas = (0.5, 0.999), 
+    # betas = (0.5, 0.999), 
+    weight_decay = 0.0
 )
 
 mo_scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -61,7 +61,8 @@ so_module = SO(source, mask)
 so_opt = optim.Adam(
     so_module.parameters(), 
     lr = 0.01, 
-    betas = (0.5, 0.999), 
+    # betas = (0.5, 0.999), 
+    weight_decay = 0.0
 )
 
 so_scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -163,4 +164,3 @@ dependencies = {"l2u": l2u, "u2l": u2l}
 engine_config = EngineConfig(train_iters=10, logger_type="none")
 engine = Engine(config=engine_config, problems=smo_problem, dependencies=dependencies)
 engine.run()
-
