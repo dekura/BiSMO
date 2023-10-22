@@ -280,7 +280,6 @@ class MOLitModule(LightningModule):
         loss = l2 * self.hparams.weight_l2 + pvb * self.hparams.weight_pvb
         
         # l2 in 1e-3, pvb in 1e-5
-        # print(pvb * 8000, l2 * 1000)
         l2_val = (RI_norm - self.mask.target_data).abs().sum()
         pvb_val = (RI_norm - RI_min).abs().sum() + (RI_norm - RI_max).abs().sum()
         other_pvb_val = (RI_max - RI_min).abs().sum()
@@ -327,12 +326,12 @@ class MOLitModule(LightningModule):
         l2_error = l2.detach().clone()
         pvb_error = pvb.detach().clone()
         other_pvb_error = other_pvb.detach().clone()
-        binary_AI = RI.detach().clone()
-        vis_pvb = RI_pvb.detach().clone()
 
         self.log("val/l2", l2_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
         self.log("val/pvb", pvb_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
         self.log("val/other_pvb", other_pvb_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+
+        masked_moed = torch.where(self.mask_value > 0.5, 1.0, 0.0).float()
 
         if self.hparams.visual_in_val:
             if self.global_rank == 0:
@@ -342,11 +341,10 @@ class MOLitModule(LightningModule):
                         aim.Image(transform(i))
                         for i in [
                             self.s.data.clone().detach(),
-                            self.mask.data,
-                            self.mask.target_data,
-                            binary_AI.to(torch.float32),
-                            # RI,
-                            vis_pvb,
+                            self.mask.target_data.clone().detach(),
+                            masked_moed.detach().clone(),
+                            RI.detach().clone(),
+                            RI_pvb.detach().clone(),
                             AI.clone().detach(),
                         ]
                     ]
@@ -378,7 +376,7 @@ class MOLitModule(LightningModule):
         RI_moed = RI.detach().clone()
         AI_moed = AI.detach().clone()
         RI_pvb_moed = RI_pvb.detach().clone()
-        masked_moed = torch.where(self.mask_value > 0.5, 1, 0)
+        masked_moed = torch.where(self.mask_value > 0.5, 1.0, 0.0).float()
 
         AI_moed_path = AI_folder / self.mask.mask_name
         RI_moed_path = RI_folder / self.mask.mask_name
