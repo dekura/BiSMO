@@ -44,12 +44,16 @@ mo_opt = optim.Adam(
     weight_decay = 0.0
 )
 
-mo_scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-    mo_opt, 
-    mode = 'min', 
-    factor = 0.1, 
-    patience = 20, 
-    min_lr = 0
+# mo_scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+#     mo_opt, 
+#     mode = 'min', 
+#     factor = 0.1, 
+#     patience = 20, 
+#     min_lr = 0
+# )
+
+mo_scheduler = optim.lr_scheduler.StepLR(
+            mo_opt, step_size=500, gamma=0.1
 )
 
 # so problem params.
@@ -65,12 +69,16 @@ so_opt = optim.Adam(
     weight_decay = 0.0
 )
 
-so_scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-    so_opt, 
-    mode = 'min', 
-    factor = 0.1, 
-    patience = 20, 
-    min_lr = 0
+# so_scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+#     so_opt, 
+#     mode = 'min', 
+#     factor = 0.1, 
+#     patience = 20, 
+#     min_lr = 0
+# )
+
+so_scheduler = optim.lr_scheduler.StepLR(
+            so_opt, step_size=500, gamma=0.1
 )
 
 # source_value and mask_value
@@ -93,7 +101,8 @@ class MOProblem(ImplicitProblem):
 
     def training_step(self,):
         # get source_params from SO
-        _, _, source_params = self.so()
+        # _, _, source_params = self.so()
+        _, _, source_params = self.so.module.forward(self.mask_params)
 
         _, RIlist, _ = self.forward(source_params)
         l2 = self.criterion(RIlist[1], self.mask.target_data.float())
@@ -137,13 +146,14 @@ l2u = {so_problem: [mo_problem]}
 u2l = {mo_problem: [so_problem]}
 dependencies = {"l2u": l2u, "u2l": u2l}
 
-# class NASEngine(Engine):
+# class SMOEngine(Engine):
 #     @torch.no_grad()
 #     def validation(self):
+#         # so step
 #         # _, _, source_params = self.so()
 #         _, _, mask_params = self.mo()
 
-#         _, RIlist, _  = self.so
+#         _, RIlist, _ = self.so.module.forward(mask_params)
 #         RI_min = torch.where(RIlist[0] > 0.5, 1.0, 0.0).float()
 #         RI_norm = torch.where(RIlist[1] > 0.5, 1.0, 0.0).float()
 #         RI_max = torch.where(RIlist[2] > 0.5, 1.0, 0.0).float()
