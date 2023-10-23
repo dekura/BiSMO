@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-10-22 13:05:39
-LastEditTime: 2023-10-22 19:12:00
+LastEditTime: 2023-10-22 21:15:42
 Contact: cgjcuhk@gmail.com
 Description: the defination of Source optimization problem.
 """
@@ -15,19 +15,18 @@ from src.betty.configs import Config, EngineConfig
 from src.betty.problems import ImplicitProblem
 
 
-
-
 class MO(ImplicitProblem):
-    def __init__(self,
-                config: Config,
-                module: nn.Module,
-                optimizer_cfg: torch.optim.Optimizer,
-                train_data_loader=None,
-                # scheduler_cfg: torch.optim.lr_scheduler,
-                name: str = "MO",
-                weight_l2: float = 1000,
-                weight_pvb: float = 8000,
-                ):
+    def __init__(
+        self,
+        config: Config,
+        module: nn.Module,
+        optimizer_cfg: torch.optim.Optimizer,
+        train_data_loader=None,
+        # scheduler_cfg: torch.optim.lr_scheduler,
+        name: str = "MO",
+        weight_l2: float = 1000,
+        weight_pvb: float = 8000,
+    ):
         super().__init__(
             name,
             config,
@@ -55,7 +54,6 @@ class MO(ImplicitProblem):
         else:
             self.source_value = (1 + torch.cos(source_params)) / 2
 
-
     def forward(self):
         inner_source_param = self.SO.module.source_params
         self.update_source_value(inner_source_param)
@@ -69,17 +67,21 @@ class MO(ImplicitProblem):
         RI_norm = torch.where(RIlist[1] > 0.5, 1.0, 0.0).float()
         RI_max = torch.where(RIlist[2] > 0.5, 1.0, 0.0).float()
 
-        RI_pvb = torch.where(RI_min != RI_max, 1.0, 0.0).float()
+        # RI_pvb = torch.where(RI_min != RI_max, 1.0, 0.0).float()
 
         l2 = self.criterion(RIlist[1], self.module.mask.target_data.float())
-        pvb = self.criterion(RIlist[1], RIlist[0]) + self.criterion(RIlist[1], RIlist[2])
+        pvb = self.criterion(RIlist[1], RIlist[0]) + self.criterion(
+            RIlist[1], RIlist[2]
+        )
         loss = l2 * self.weight_l2 + pvb * self.weight_pvb
 
-
         l2_val = (RI_norm - self.module.mask.target_data).abs().sum()
-        pvb_val = (RI_norm - RI_min).abs().sum() + (RI_norm - RI_max).abs().sum()
+        # pvb_val = (RI_norm - RI_min).abs().sum() + (RI_norm - RI_max).abs().sum()
         other_pvb_val = (RI_max - RI_min).abs().sum()
-
+        self.log({
+            "train/l2": l2_val.detach().clone(),
+            "train/pvb": other_pvb_val.detach().clone()
+            }, global_step=None)
         return {"loss": loss}
 
     def configure_optimizer(self):

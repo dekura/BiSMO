@@ -79,6 +79,8 @@ def bismo(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     engine = Engine(config=engine_config, problems=problems, dependencies=dependencies)
     engine.run()
 
+
+
     object_dict = {
         "cfg": cfg,
         "source": s,
@@ -88,9 +90,9 @@ def bismo(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         "engine": engine
     }
 
-    # if logger:
-        # log.info("Logging hyperparameters!")
-        # utils.log_hyperparameters(object_dict)
+    if engine.logger:
+        log.info("Logging hyperparameters!")
+        utils.log_hyperparameters(object_dict)
     metric_dict = {}
 
     return metric_dict, object_dict

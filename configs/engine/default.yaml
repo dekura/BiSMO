@@ -1,2 +1,3 @@
 _target_: src.betty.configs.EngineConfig
-train_iters: 10
+train_iters: 1000
+logger_type: aim
