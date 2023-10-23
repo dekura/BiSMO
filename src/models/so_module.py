@@ -178,8 +178,7 @@ class SO_Module(nn.Module):
         self.norm_Intensity = norm_Intensity.detach()
 
 
-    def forward(self,
-                mask_value: Mask) -> tuple[list, list, torch.Tensor]:
+    def forward(self, mask_value: Mask) -> tuple[list, list, torch.Tensor]:
         self.update_source_value()
         self.get_valid_source()
         self.get_norm_intensity()

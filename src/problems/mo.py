@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-10-22 13:05:39
-LastEditTime: 2023-10-22 17:02:16
+LastEditTime: 2023-10-22 19:12:00
 Contact: cgjcuhk@gmail.com
 Description: the defination of Source optimization problem.
 """
@@ -11,8 +11,8 @@ Description: the defination of Source optimization problem.
 import torch
 import torch.nn as nn
 
-from betty.configs import Config, EngineConfig
-from betty.problems import ImplicitProblem
+from src.betty.configs import Config, EngineConfig
+from src.betty.problems import ImplicitProblem
 
 
 
@@ -80,7 +80,7 @@ class MO(ImplicitProblem):
         pvb_val = (RI_norm - RI_min).abs().sum() + (RI_norm - RI_max).abs().sum()
         other_pvb_val = (RI_max - RI_min).abs().sum()
 
-        return loss
+        return {"loss": loss}
 
     def configure_optimizer(self):
         optimizer = self.optimizer_cfg(params=self.module.parameters())

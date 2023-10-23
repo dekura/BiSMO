@@ -4,9 +4,10 @@ mo:
   name: "MO"
 
   config:
-    _target_: betty.configs.Config
+    _target_: src.betty.configs.Config
     type: darts
     retain_graph: True
+    log_step: 10
     # gradient_accumulation: 4
     # precision: fp16
 
@@ -33,7 +34,7 @@ so:
   name: "SO"
 
   config:
-    _target_: betty.configs.Config
+    _target_: src.betty.configs.Config
     type: darts
     unroll_steps: 1
     # gradient_accumulation: 4

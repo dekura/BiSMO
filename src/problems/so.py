@@ -12,8 +12,8 @@ import torch
 import torch.nn as nn
 from torch import optim
 
-from betty.configs import Config, EngineConfig
-from betty.problems import ImplicitProblem
+from src.betty.configs import Config, EngineConfig
+from src.betty.problems import ImplicitProblem
 
 
 

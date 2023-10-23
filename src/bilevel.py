@@ -4,8 +4,7 @@ import hydra
 import pyrootutils
 import torch
 from omegaconf import DictConfig
-from betty.engine import Engine
-from betty.configs import Config, EngineConfig
+
 
 
 pyrootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
@@ -32,6 +31,8 @@ from src.models.mo_module import MO_Module
 from src.models.so_module import SO_Module
 from src.problems.mo import MO
 from src.problems.so import SO
+from src.betty.engine import Engine
+from src.betty.configs import Config, EngineConfig
 
 log = utils.get_pylogger(__name__)
 
@@ -60,18 +61,14 @@ def bismo(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     log.info(f"Instantiating datamodule <{cfg.data._target_}>")
     dataloader = hydra.utils.instantiate(cfg.data)
 
-    # log.info(f"Instantiating outer MO config <{cfg.peconfigs.outer._target_}>")
-    # outer_config: Config = hydra.utils.instantiate(cfg.peconfigs.outer)
     log.info(f"Instantiating outer MO problem <{cfg.problems.mo._target_}>")
     outer: MO = hydra.utils.instantiate(cfg.problems.mo, module=mo_module, train_data_loader=dataloader.train_dataloader())
 
-    # log.info(f"Instantiating inner SO config <{cfg.peconfigs.inner._target_}>")
-    # inner_config: Config = hydra.utils.instantiate(cfg.peconfigs.inner)
     log.info(f"Instantiating inner SO problem <{cfg.problems.so._target_}>")
     inner: SO = hydra.utils.instantiate(cfg.problems.so, module=so_module, train_data_loader=dataloader.train_dataloader())
 
-    log.info(f"Instantiating Engine config <{cfg.peconfigs.engine._target_}>")
-    engine_config: EngineConfig = hydra.utils.instantiate(cfg.peconfigs.engine)
+    log.info(f"Instantiating Engine config <{cfg.engine._target_}>")
+    engine_config: EngineConfig = hydra.utils.instantiate(cfg.engine)
 
     problems = [outer, inner]
     l2u = {inner: [outer]}
@@ -94,14 +91,9 @@ def bismo(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     # if logger:
         # log.info("Logging hyperparameters!")
         # utils.log_hyperparameters(object_dict)
+    metric_dict = {}
 
-    # if cfg.get("compile"):
-        # log.info("Compiling model!")
-        # model = torch.compile(model)
-
-
-
-    return object_dict
+    return metric_dict, object_dict
 
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="bismo.yaml")
@@ -110,7 +102,9 @@ def main(cfg: DictConfig) -> Optional[float]:
     # (e.g. ask for tags if none are provided in cfg, print cfg tree, etc.)
     utils.extras(cfg)
 
-    object_dict = bismo(cfg)
+
+
+    metric_dict, object_dict = bismo(cfg)
 
     # metric_value = utils.get_metric_value(
     #     metric_dict=metric_dict, metric_name=cfg.get("optimized_metric")

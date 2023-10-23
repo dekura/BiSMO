@@ -8,7 +8,7 @@ defaults:
   - mask: img_mask
   - data: dummy
   - module: bilevel
-  - peconfigs: default
+  - engine: default
   - problems: default
   - paths: default
   - extras: default

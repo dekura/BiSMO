@@ -1,0 +1,2 @@
+_target_: src.betty.configs.EngineConfig
+train_iters: 10
