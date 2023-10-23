@@ -33,6 +33,7 @@ from src.problems.mo import MO
 from src.problems.so import SO
 from src.betty.engine import Engine
 from src.betty.configs import Config, EngineConfig
+from src.engine.smo_engine import SMOEngine
 
 log = utils.get_pylogger(__name__)
 
@@ -42,6 +43,10 @@ def bismo(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
     # assert cfg.ckpt_path
     # TODO What should be assert?
+
+    # to save memory on torch.fft
+    torch.backends.cuda.cufft_plan_cache[2].max_size = int(cfg.cufft_max_cache_size)
+
 
     log.info(f"Instantiating Source <{cfg.source._target_}>")
     s: Source = hydra.utils.instantiate(cfg.source)
@@ -76,7 +81,7 @@ def bismo(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     dependencies = {"l2u": l2u, "u2l": u2l}
 
     log.info(f"Instantiating Engine")
-    engine = Engine(config=engine_config, problems=problems, dependencies=dependencies)
+    engine = SMOEngine(config=engine_config, problems=problems, dependencies=dependencies)
     engine.run()
 
 

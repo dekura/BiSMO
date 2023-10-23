@@ -777,11 +777,11 @@ class Problem:
         loss_log = log_from_loss_dict(stats)
         if global_step is None:
             self.logger.info(
-                f'[Problem "{self._name}"] [Local Step {self._count}] {loss_log}'
+                f'[Problem "{self._name}" type: {self.config.type}] [Local Step {self._count}] {loss_log}'
             )
         else:
             self.logger.info(
-                f'[Problem "{self._name}"] [Global Step {global_step}] [Local Step {self._count}] '
+                f'[Problem "{self._name}" type: {self.config.type}] [Global Step {global_step}] [Local Step {self._count}] '
                 f"{loss_log}"
             )
         cur_step = global_step

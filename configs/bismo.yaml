@@ -24,6 +24,10 @@ defaults:
   # debugging config (enable through command line, e.g. `python train.py debug=default)
   - debug: null
 # Mask
+
+# to save memory on torch.fft
+cufft_max_cache_size: 1024
+
 task_name: "bismo"
 
 # tags to help you identify your experiments

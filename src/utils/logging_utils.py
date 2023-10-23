@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-10-22 09:37:20
-LastEditTime: 2023-10-22 20:36:44
+LastEditTime: 2023-10-23 11:47:45
 Contact: cgjcuhk@gmail.com
 Description: 
 """
@@ -43,11 +43,13 @@ def log_hyperparameters(object_dict: dict) -> None:
     # )
 
     # hparams["data"] = cfg["data"]
+    hparams["cufft_max_cache_size"] = cfg["cufft_max_cache_size"]
     hparams["engine"] = cfg["engine"]
     hparams["source"] = cfg.get("source")
     hparams["mask"] = cfg.get("mask")
-    hparams["mo_module"] = cfg.get("module.mo")
-    hparams["so_module"] = cfg.get("module.so")
+    hparams["module"] = cfg.get("module")
+    hparams["engine"] = cfg.get("engine")
+    hparams["problems"] = cfg.get("problems")
 
 
     hparams["callbacks"] = cfg.get("callbacks")

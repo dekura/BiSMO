@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-10-22 13:05:39
-LastEditTime: 2023-10-22 17:04:23
+LastEditTime: 2023-10-23 16:04:32
 Contact: cgjcuhk@gmail.com
 Description: the defination of Source optimization problem.
 """
@@ -23,11 +23,12 @@ class SO(ImplicitProblem):
                 config: Config,
                 module: nn.Module,
                 optimizer_cfg: torch.optim.Optimizer,
-                # scheduler_cfg: torch.optim.lr_scheduler,
+                scheduler_cfg: torch.optim.lr_scheduler,
                 train_data_loader=None,
                 name: str = "SO",
                 weight_l2: float = 1000,
                 weight_pvb: float = 8000,
+                device: str = "cuda:0",
                 ):
         super().__init__(
             name,
@@ -43,7 +44,9 @@ class SO(ImplicitProblem):
         self.weight_l2 = weight_l2
         self.weight_pvb = weight_pvb
         self.optimizer_cfg = optimizer_cfg
-        # self.scheduler_cfg = scheduler_cfg
+        self.scheduler_cfg = scheduler_cfg
+        # self.device = torch.device(device)
+        self.device_id = device
 
     def update_mask_value(self, mask_params):
         if self.MO.module.mask_acti == 'sigmoid':
@@ -87,6 +90,9 @@ class SO(ImplicitProblem):
         optimizer = self.optimizer_cfg(params=self.module.parameters())
         return optimizer
 
-    # def configure_scheduler(self):
-    #     scheduler = self.scheduler_cfg(optimizer=self.optimizer)
-    #     return scheduler
+    def configure_scheduler(self):
+        scheduler = self.scheduler_cfg(optimizer=self.optimizer)
+        return scheduler
+
+    def configure_device(self, device):
+        self.device = torch.device(self.device_id)

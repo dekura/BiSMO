@@ -15,11 +15,10 @@ class MO_Module(nn.Module):
                 resist_sigmoid_steepness: float = 60,
                 resist_intensity: float = 0.225,
                 dose_list: list = [0.98, 1.00, 1.02],
-                weight_l2: float = 1000,
-                weight_pvb: float = 8000,
                 lens_n_liquid: float = 1.44,
                 lens_reduction: float = 0.25,
                 low_light_thres: float = 0.001,
+                device: str = "cuda:0"
                 ) -> None:
         super().__init__()
 
@@ -47,14 +46,11 @@ class MO_Module(nn.Module):
 
         # loss params
         self.dose_list = dose_list
-        self.weight_l2 = weight_l2
-        self.weight_pvb = weight_pvb
-
         # loss function
         self.criterion = nn.MSELoss()
 
 
-        self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+        self.device = torch.device(device)
 
         self.init_freq_domain_on_device()
         # define mask_params
@@ -168,7 +164,7 @@ class MO_Module(nn.Module):
         # get_norm_intensity
         norm_pupil_fdata = self.cal_pupil(self.simple_source_fx1d, self.simple_source_fy1d)
         norm_tempHAber = self.norm_spectrum_calc * norm_pupil_fdata
-        norm_ExyzFrequency = norm_tempHAber.view(-1, 1)
+        norm_ExyzFrequency = norm_tempHAber.view(-1, 1).detach()
         norm_Exyz = torch.fft.fftshift(torch.fft.fft(norm_ExyzFrequency))
         norm_IntensityCon = torch.abs(norm_Exyz * torch.conj(norm_Exyz))
         norm_total_intensity = torch.matmul(

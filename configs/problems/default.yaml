@@ -1,3 +1,8 @@
+weight_l2 : 1000
+weight_pvb : 4000
+problem_type : darts
+device_id: ${module.device_id}
+
 mo:
   _target_: src.problems.mo.MO
   # _partial_: true
@@ -5,11 +10,9 @@ mo:
 
   config:
     _target_: src.betty.configs.Config
-    type: darts
+    type: ${problems.problem_type}
     retain_graph: True
     log_step: 10
-    # gradient_accumulation: 4
-    # precision: fp16
 
   optimizer_cfg:
     _target_: torch.optim.Adam
@@ -17,15 +20,14 @@ mo:
     lr: 0.01
     weight_decay: 0.0
 
-  # scheduler_cfg:
-  #   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
-  #   _partial_: true
-  #   mode: min
-  #   factor: 0.1
-  #   patience: 20
+  scheduler_cfg:
+    _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+    _partial_: true
+    T_max: ${engine.train_iters}
 
-  weight_l2: 1000
-  weight_pvb: 8000
+  weight_l2: ${problems.weight_l2}
+  weight_pvb: ${problems.weight_pvb}
+  device: "cuda:${module.device_id}"
 
 
 so:
@@ -35,10 +37,8 @@ so:
 
   config:
     _target_: src.betty.configs.Config
-    type: darts
+    type: ${problems.problem_type}
     unroll_steps: 1
-    # gradient_accumulation: 4
-    # precision: fp16
 
 
   optimizer_cfg:
@@ -47,12 +47,11 @@ so:
     lr: 0.01
     weight_decay: 0.0
 
-  # scheduler_cfg:
-  #   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
-  #   _partial_: true
-  #   mode: min
-  #   factor: 0.1
-  #   patience: 20
+  scheduler_cfg:
+    _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+    _partial_: true
+    T_max: ${engine.train_iters}
 
-  weight_l2: 1000
-  weight_pvb: 8000
+  weight_l2: ${problems.weight_l2}
+  weight_pvb: ${problems.weight_pvb}
+  device: "cuda:${module.device_id}"

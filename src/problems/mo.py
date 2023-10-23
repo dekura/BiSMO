@@ -2,18 +2,18 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-10-22 13:05:39
-LastEditTime: 2023-10-22 21:15:42
+LastEditTime: 2023-10-23 15:58:59
 Contact: cgjcuhk@gmail.com
 Description: the defination of Source optimization problem.
 """
 
-
+import aim
 import torch
 import torch.nn as nn
-
+import torchvision.transforms as T
 from src.betty.configs import Config, EngineConfig
 from src.betty.problems import ImplicitProblem
-
+from src.betty.logging.logger_aim import AimLogger
 
 class MO(ImplicitProblem):
     def __init__(
@@ -21,11 +21,13 @@ class MO(ImplicitProblem):
         config: Config,
         module: nn.Module,
         optimizer_cfg: torch.optim.Optimizer,
+        scheduler_cfg: torch.optim.lr_scheduler,
         train_data_loader=None,
-        # scheduler_cfg: torch.optim.lr_scheduler,
         name: str = "MO",
         weight_l2: float = 1000,
         weight_pvb: float = 8000,
+        vis_in_train: bool = False,
+        device: str = "cuda:0",
     ):
         super().__init__(
             name,
@@ -42,7 +44,10 @@ class MO(ImplicitProblem):
         self.weight_l2 = weight_l2
         self.weight_pvb = weight_pvb
         self.optimizer_cfg = optimizer_cfg
-        # self.scheduler_cfg = scheduler_cfg
+        self.scheduler_cfg = scheduler_cfg
+        self.vis_in_train = vis_in_train
+        # self.device = torch.device(device)
+        self.device_id = device
 
     def update_source_value(self, source_params):
         if self.SO.module.source_acti == "cosine":
@@ -82,12 +87,37 @@ class MO(ImplicitProblem):
             "train/l2": l2_val.detach().clone(),
             "train/pvb": other_pvb_val.detach().clone()
             }, global_step=None)
+
+        if self.vis_in_train:
+            if self.is_rank_zero():
+                mask_moed = torch.where(self.module.mask_value > 0.5, 1.0, 0.0).float()
+                transform = T.ToPILImage()
+                aim_images = [
+                    aim.Image(transform(i))
+                    for i in [
+                        self.source_value.clone().detach(),
+                        mask_moed.clone().detach(),
+                        self.module.mask_value.detach().clone(),
+                        RI_norm.detach().clone(),
+                        self.module.mask.target_data.clone().detach(),
+                    ]
+                ]
+                self.logger.experiment.track(
+                    value=aim_images,
+                    name=f"train epoch {self._count}",
+                    step=self._count,
+                    context={"train epoch": self._count},
+                )
+
         return {"loss": loss}
 
     def configure_optimizer(self):
         optimizer = self.optimizer_cfg(params=self.module.parameters())
         return optimizer
 
-    # def configure_scheduler(self):
-    #     scheduler = self.scheduler_cfg(optimizer=self.optimizer)
-    #     return scheduler
+    def configure_scheduler(self):
+        scheduler = self.scheduler_cfg(optimizer=self.optimizer)
+        return scheduler
+
+    def configure_device(self, device):
+        self.device = torch.device(self.device_id)

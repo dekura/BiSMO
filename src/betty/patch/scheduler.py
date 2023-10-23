@@ -14,6 +14,8 @@ def patch_scheduler(scheduler, optimizer):
             kwargs[key] = getattr(scheduler, key) - 1
         elif key == "lr_lambda":
             kwargs[key] = getattr(scheduler, "lr_lambdas")
+        elif key == "min_lr":
+            kwargs[key] = getattr(scheduler, "min_lrs")
         else:
             value = getattr(scheduler, key)
             kwargs[key] = value
