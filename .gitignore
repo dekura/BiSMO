@@ -158,3 +158,5 @@ configs/local/default.yaml
 /data/npz
 /data/npz.zip
 **.DS_Store
+/data/ibm_opc_test
+aim.zip
