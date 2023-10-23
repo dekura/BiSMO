@@ -1,7 +1,12 @@
 weight_l2 : 1000
 weight_pvb : 4000
-problem_type : darts
 device_id: ${module.device_id}
+
+problem_type : darts
+# for neumann_iterations
+nmn_iters: 3
+# for cg_iterations
+cg_iters: 2
 
 mo:
   _target_: src.problems.mo.MO

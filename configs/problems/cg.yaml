@@ -2,3 +2,22 @@ defaults:
   - default
 
 problem_type : cg
+cg_iters: 2
+
+
+mo:
+  config:
+    _target_: src.betty.configs.Config
+    type: ${problems.problem_type}
+    retain_graph: True
+    log_step: 10
+    cg_iterations: ${problems.cg_iters}
+    cg_alpha: 1
+
+
+so:
+  config:
+    _target_: src.betty.configs.Config
+    type: ${problems.problem_type}
+    cg_iterations: ${problems.cg_iters}
+    cg_alpha: 1

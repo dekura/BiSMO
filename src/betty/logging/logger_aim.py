@@ -26,7 +26,7 @@ class AimLogger(LoggerBase):
         train_metric_prefix: Optional[str] = "train_",
         val_metric_prefix: Optional[str] = "val_",
         test_metric_prefix: Optional[str] = "test_",
-        system_tracking_interval: Optional[int] = DEFAULT_SYSTEM_TRACKING_INT,
+        system_tracking_interval: Optional[int] = None,
         log_system_params: Optional[bool] = False,
         capture_terminal_logs: Optional[bool] = True,
         run_name: Optional[str] = None,
@@ -41,8 +41,8 @@ class AimLogger(LoggerBase):
         self._train_metric_prefix = train_metric_prefix
         self._val_metric_prefix = val_metric_prefix
         self._test_metric_prefix = test_metric_prefix
-        self._system_tracking_interval = system_tracking_interval
-        self._log_system_params = log_system_params
+        self._system_tracking_interval = None
+        self._log_system_params = False
         self._capture_terminal_logs = capture_terminal_logs
 
         self._run = None

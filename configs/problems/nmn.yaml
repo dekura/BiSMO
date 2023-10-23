@@ -2,3 +2,21 @@ defaults:
   - default
 
 problem_type : neumann
+nmn_iters: 3
+
+mo:
+  config:
+    _target_: src.betty.configs.Config
+    type: ${problems.problem_type}
+    retain_graph: True
+    log_step: 10
+    neumann_iterations: ${problems.nmn_iters}
+    neumann_alpha: 1.0
+
+
+so:
+  config:
+    _target_: src.betty.configs.Config
+    type: ${problems.problem_type}
+    neumann_iterations: ${problems.nmn_iters}
+    neumann_alpha: 1.0
