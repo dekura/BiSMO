@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-10-22 13:05:39
-LastEditTime: 2023-10-23 21:24:07
+LastEditTime: 2023-10-23 22:00:10
 Contact: cgjcuhk@gmail.com
 Description: the definition of Source optimization problem.
 """
@@ -84,7 +84,11 @@ class MO(ImplicitProblem):
         # pvb_val = (RI_norm - RI_min).abs().sum() + (RI_norm - RI_max).abs().sum()
         other_pvb_val = (RI_max - RI_min).abs().sum()
         self.log(
-            {"train/l2": l2_val.detach().clone(), "train/pvb": other_pvb_val.detach().clone()},
+            {
+                "train/loss": loss.clone().detach(),
+                "train/l2": l2_val.detach().clone(),
+                "train/pvb": other_pvb_val.detach().clone(),
+            },
             global_step=None,
         )
 
@@ -109,11 +113,7 @@ class MO(ImplicitProblem):
                     context={"train epoch": self._count},
                 )
 
-        return {
-            "loss": loss,
-            "mo/l2": l2_val.detach().clone(),
-            "mo/pvb": other_pvb_val.detach().clone(),
-        }
+        return {"loss": loss}
 
     def configure_optimizer(self):
         optimizer = self.optimizer_cfg(params=self.module.parameters())
