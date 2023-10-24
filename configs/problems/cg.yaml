@@ -1,9 +1,9 @@
 defaults:
   - default
 
-problem_type : cg
-cg_iters: 2
-
+problem_type: cg
+cg_iters: 3
+unroll_steps: 4
 
 mo:
   config:
@@ -13,7 +13,7 @@ mo:
     log_step: 10
     cg_iterations: ${problems.cg_iters}
     cg_alpha: 1
-
+    unroll_steps: ${problems.unroll_steps}
 
 so:
   config:
@@ -21,3 +21,4 @@ so:
     type: ${problems.problem_type}
     cg_iterations: ${problems.cg_iters}
     cg_alpha: 1
+    unroll_steps: ${problems.unroll_steps}
