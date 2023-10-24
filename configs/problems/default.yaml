@@ -7,6 +7,8 @@ problem_type : darts
 nmn_iters: 3
 # for cg_iterations
 cg_iters: 2
+# for both cg and neumann
+unroll_steps: 1
 
 mo:
   _target_: src.problems.mo.MO
@@ -18,6 +20,7 @@ mo:
     type: ${problems.problem_type}
     retain_graph: True
     log_step: 10
+    unroll_steps: ${problems.unroll_steps}
 
   optimizer_cfg:
     _target_: torch.optim.Adam
@@ -43,7 +46,7 @@ so:
   config:
     _target_: src.betty.configs.Config
     type: ${problems.problem_type}
-    unroll_steps: 1
+    unroll_steps: ${problems.unroll_steps}
 
 
   optimizer_cfg:

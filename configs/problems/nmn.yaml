@@ -3,6 +3,7 @@ defaults:
 
 problem_type : neumann
 nmn_iters: 3
+unroll_steps: 4
 
 mo:
   config:
@@ -12,6 +13,7 @@ mo:
     log_step: 10
     neumann_iterations: ${problems.nmn_iters}
     neumann_alpha: 1.0
+    unroll_steps: ${problems.unroll_steps}
 
 
 so:
@@ -20,3 +22,4 @@ so:
     type: ${problems.problem_type}
     neumann_iterations: ${problems.nmn_iters}
     neumann_alpha: 1.0
+    unroll_steps: ${problems.unroll_steps}
