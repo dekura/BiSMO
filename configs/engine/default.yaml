@@ -1,4 +1,4 @@
 _target_: src.betty.configs.EngineConfig
-train_iters: 500
+train_iters: ${eval:'${max_iters}*${problems.unroll_steps}'}
 logger_type: aim
 valid_step: 50

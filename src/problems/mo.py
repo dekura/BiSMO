@@ -2,18 +2,20 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-10-22 13:05:39
-LastEditTime: 2023-10-23 15:58:59
+LastEditTime: 2023-10-23 21:24:07
 Contact: cgjcuhk@gmail.com
-Description: the defination of Source optimization problem.
+Description: the definition of Source optimization problem.
 """
 
 import aim
 import torch
 import torch.nn as nn
 import torchvision.transforms as T
+
 from src.betty.configs import Config, EngineConfig
-from src.betty.problems import ImplicitProblem
 from src.betty.logging.logger_aim import AimLogger
+from src.betty.problems import ImplicitProblem
+
 
 class MO(ImplicitProblem):
     def __init__(
@@ -75,18 +77,16 @@ class MO(ImplicitProblem):
         # RI_pvb = torch.where(RI_min != RI_max, 1.0, 0.0).float()
 
         l2 = self.criterion(RIlist[1], self.module.mask.target_data.float())
-        pvb = self.criterion(RIlist[1], RIlist[0]) + self.criterion(
-            RIlist[1], RIlist[2]
-        )
+        pvb = self.criterion(RIlist[1], RIlist[0]) + self.criterion(RIlist[1], RIlist[2])
         loss = l2 * self.weight_l2 + pvb * self.weight_pvb
 
         l2_val = (RI_norm - self.module.mask.target_data).abs().sum()
         # pvb_val = (RI_norm - RI_min).abs().sum() + (RI_norm - RI_max).abs().sum()
         other_pvb_val = (RI_max - RI_min).abs().sum()
-        self.log({
-            "train/l2": l2_val.detach().clone(),
-            "train/pvb": other_pvb_val.detach().clone()
-            }, global_step=None)
+        self.log(
+            {"train/l2": l2_val.detach().clone(), "train/pvb": other_pvb_val.detach().clone()},
+            global_step=None,
+        )
 
         if self.vis_in_train:
             if self.is_rank_zero():
@@ -109,7 +109,11 @@ class MO(ImplicitProblem):
                     context={"train epoch": self._count},
                 )
 
-        return {"loss": loss}
+        return {
+            "loss": loss,
+            "mo/l2": l2_val.detach().clone(),
+            "mo/pvb": other_pvb_val.detach().clone(),
+        }
 
     def configure_optimizer(self):
         optimizer = self.optimizer_cfg(params=self.module.parameters())

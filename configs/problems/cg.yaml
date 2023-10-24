@@ -1,7 +1,7 @@
 defaults:
   - default
 
-problem_type : cg
+problem_type: cg
 cg_iters: 3
 unroll_steps: 4
 

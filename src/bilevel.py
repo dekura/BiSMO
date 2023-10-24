@@ -1,11 +1,11 @@
-from typing import Any, List, Dict, Tuple, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import hydra
 import pyrootutils
 import torch
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
-
+OmegaConf.register_new_resolver("eval", eval)
 
 pyrootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 # ------------------------------------------------------------------------------------ #
@@ -26,27 +26,25 @@ pyrootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 # ------------------------------------------------------------------------------------ #
 
 from src import utils
+from src.betty.configs import Config, EngineConfig
+from src.betty.engine import Engine
+from src.engine.smo_engine import SMOEngine
 from src.models.litho import Mask, Source
 from src.models.mo_module import MO_Module
 from src.models.so_module import SO_Module
 from src.problems.mo import MO
 from src.problems.so import SO
-from src.betty.engine import Engine
-from src.betty.configs import Config, EngineConfig
-from src.engine.smo_engine import SMOEngine
 
 log = utils.get_pylogger(__name__)
 
 
 @utils.task_wrapper
 def bismo(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-
     # assert cfg.ckpt_path
     # TODO What should be assert?
 
     # to save memory on torch.fft
     torch.backends.cuda.cufft_plan_cache[2].max_size = int(cfg.cufft_max_cache_size)
-
 
     log.info(f"Instantiating Source <{cfg.source._target_}>")
     s: Source = hydra.utils.instantiate(cfg.source)
@@ -67,10 +65,14 @@ def bismo(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     dataloader = hydra.utils.instantiate(cfg.data)
 
     log.info(f"Instantiating outer MO problem <{cfg.problems.mo._target_}>")
-    outer: MO = hydra.utils.instantiate(cfg.problems.mo, module=mo_module, train_data_loader=dataloader.train_dataloader())
+    outer: MO = hydra.utils.instantiate(
+        cfg.problems.mo, module=mo_module, train_data_loader=dataloader.train_dataloader()
+    )
 
     log.info(f"Instantiating inner SO problem <{cfg.problems.so._target_}>")
-    inner: SO = hydra.utils.instantiate(cfg.problems.so, module=so_module, train_data_loader=dataloader.train_dataloader())
+    inner: SO = hydra.utils.instantiate(
+        cfg.problems.so, module=so_module, train_data_loader=dataloader.train_dataloader()
+    )
 
     log.info(f"Instantiating Engine config <{cfg.engine._target_}>")
     engine_config: EngineConfig = hydra.utils.instantiate(cfg.engine)
@@ -80,11 +82,9 @@ def bismo(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     u2l = {outer: [inner]}
     dependencies = {"l2u": l2u, "u2l": u2l}
 
-    log.info(f"Instantiating Engine")
+    log.info("Instantiating Engine")
     engine = SMOEngine(config=engine_config, problems=problems, dependencies=dependencies)
     engine.run()
-
-
 
     object_dict = {
         "cfg": cfg,
@@ -92,7 +92,7 @@ def bismo(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         "mask": m,
         "mo_module": mo_module,
         "so_module": so_module,
-        "engine": engine
+        "engine": engine,
     }
 
     if engine.logger:
@@ -108,8 +108,6 @@ def main(cfg: DictConfig) -> Optional[float]:
     # apply extra utilities
     # (e.g. ask for tags if none are provided in cfg, print cfg tree, etc.)
     utils.extras(cfg)
-
-
 
     metric_dict, object_dict = bismo(cfg)
 
