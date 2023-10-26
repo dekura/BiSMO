@@ -2,9 +2,9 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-10-22 13:05:39
-LastEditTime: 2023-10-23 16:04:32
+LastEditTime: 2023-10-25 22:22:46
 Contact: cgjcuhk@gmail.com
-Description: the defination of Source optimization problem.
+Description: the definition of Source optimization problem.
 """
 
 
@@ -16,20 +16,19 @@ from src.betty.configs import Config, EngineConfig
 from src.betty.problems import ImplicitProblem
 
 
-
-
 class SO(ImplicitProblem):
-    def __init__(self,
-                config: Config,
-                module: nn.Module,
-                optimizer_cfg: torch.optim.Optimizer,
-                scheduler_cfg: torch.optim.lr_scheduler,
-                train_data_loader=None,
-                name: str = "SO",
-                weight_l2: float = 1000,
-                weight_pvb: float = 8000,
-                device: str = "cuda:0",
-                ):
+    def __init__(
+        self,
+        config: Config,
+        module: nn.Module,
+        optimizer_cfg: torch.optim.Optimizer,
+        scheduler_cfg: torch.optim.lr_scheduler,
+        train_data_loader=None,
+        name: str = "SO",
+        weight_l2: float = 1000,
+        weight_pvb: float = 3000,
+        device: str = "cuda:0",
+    ):
         super().__init__(
             name,
             config,
@@ -49,7 +48,7 @@ class SO(ImplicitProblem):
         self.device_id = device
 
     def update_mask_value(self, mask_params):
-        if self.MO.module.mask_acti == 'sigmoid':
+        if self.MO.module.mask_acti == "sigmoid":
             # mask after activation func
             self.mask_value = self.sigmoid_mask(
                 self.MO.module.mask_sigmoid_steepness * mask_params
@@ -58,7 +57,6 @@ class SO(ImplicitProblem):
             self.mask_value = self.sigmoid_mask(
                 self.MO.module.mask_sigmoid_steepness * mask_params
             )
-
 
     def forward(self):
         outer_mask_param = self.MO.module.mask_params
@@ -78,7 +76,6 @@ class SO(ImplicitProblem):
         l2 = self.criterion(RIlist[1], self.module.mask.target_data.float())
         pvb = self.criterion(RIlist[1], RIlist[0]) + self.criterion(RIlist[1], RIlist[2])
         loss = l2 * self.weight_l2 + pvb * self.weight_pvb
-
 
         l2_val = (RI_norm - self.module.mask.target_data).abs().sum()
         pvb_val = (RI_norm - RI_min).abs().sum() + (RI_norm - RI_max).abs().sum()

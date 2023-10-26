@@ -1,25 +1,28 @@
 import torch
 from torch import nn
+
+from src.models.litho.img_mask import Mask
+from src.models.litho.source import Source
+
 # import torch.nn.functional as F
 
-from src.models.litho.source import Source
-from src.models.litho.img_mask import Mask
 
 # higher level.
 class MO_Module(nn.Module):
-    def __init__(self,
-                source: Source,
-                mask: Mask,
-                mask_acti: str = 'sigmoid',
-                mask_sigmoid_steepness: float = 8,
-                resist_sigmoid_steepness: float = 60,
-                resist_intensity: float = 0.225,
-                dose_list: list = [0.98, 1.00, 1.02],
-                lens_n_liquid: float = 1.44,
-                lens_reduction: float = 0.25,
-                low_light_thres: float = 0.001,
-                device: str = "cuda:0"
-                ) -> None:
+    def __init__(
+        self,
+        source: Source,
+        mask: Mask,
+        mask_acti: str = "sigmoid",
+        mask_sigmoid_steepness: float = 8,
+        resist_sigmoid_steepness: float = 30,
+        resist_intensity: float = 0.225,
+        dose_list: list = [0.98, 1.00, 1.02],
+        lens_n_liquid: float = 1.44,
+        lens_reduction: float = 0.25,
+        low_light_thres: float = 0.001,
+        device: str = "cuda:0",
+    ) -> None:
         super().__init__()
 
         # source and mask
@@ -48,7 +51,6 @@ class MO_Module(nn.Module):
         self.dose_list = dose_list
         # loss function
         self.criterion = nn.MSELoss()
-
 
         self.device = torch.device(device)
 
@@ -113,28 +115,30 @@ class MO_Module(nn.Module):
             self.mask_params.data.sub_(0.99)
 
     def sigmoid_resist(self, aerial) -> torch.Tensor:
-        return torch.sigmoid(
-            self.resist_sigmoid_steepness * (aerial - self.resist_intensity)
-        )
+        return torch.sigmoid(self.resist_sigmoid_steepness * (aerial - self.resist_intensity))
 
     def update_mask_value(self) -> None:
-        if self.mask_acti == 'sigmoid':
+        if self.mask_acti == "sigmoid":
             # mask after activation func
-            self.mask_value = self.sigmoid_mask(
-                self.mask_sigmoid_steepness * self.mask_params
-            )
+            self.mask_value = self.sigmoid_mask(self.mask_sigmoid_steepness * self.mask_params)
         else:
-            self.mask_value = self.sigmoid_mask(
-                self.mask_sigmoid_steepness * self.mask_params
-            )
+            self.mask_value = self.sigmoid_mask(self.mask_sigmoid_steepness * self.mask_params)
         # self.mask.maskfft()
-        self.mask_fvalue_min = torch.fft.fftshift(torch.fft.fft2(torch.fft.ifftshift(self.mask_value * self.dose_list[0])))
-        self.mask_fvalue_norm = torch.fft.fftshift(torch.fft.fft2(torch.fft.ifftshift(self.mask_value * self.dose_list[1])))
-        self.mask_fvalue_max = torch.fft.fftshift(torch.fft.fft2(torch.fft.ifftshift(self.mask_value * self.dose_list[2])))
+        self.mask_fvalue_min = torch.fft.fftshift(
+            torch.fft.fft2(torch.fft.ifftshift(self.mask_value * self.dose_list[0]))
+        )
+        self.mask_fvalue_norm = torch.fft.fftshift(
+            torch.fft.fft2(torch.fft.ifftshift(self.mask_value * self.dose_list[1]))
+        )
+        self.mask_fvalue_max = torch.fft.fftshift(
+            torch.fft.fft2(torch.fft.ifftshift(self.mask_value * self.dose_list[2]))
+        )
 
-    def cal_pupil(self,
-                FX: torch.Tensor,
-                FY: torch.Tensor,) -> torch.Tensor:
+    def cal_pupil(
+        self,
+        FX: torch.Tensor,
+        FY: torch.Tensor,
+    ) -> torch.Tensor:
         R = torch.sqrt(FX**2 + FY**2)  # rho
         fgSquare = torch.square(R)
         # source used
@@ -159,7 +163,6 @@ class MO_Module(nn.Module):
         self.simple_source_fxy2 = self.simple_source_fx1d.pow(2) + self.simple_source_fy1d.pow(2)
         self.source_weight = torch.sum(self.simple_source_value)
 
-
     def get_norm_intensity(self):
         # get_norm_intensity
         norm_pupil_fdata = self.cal_pupil(self.simple_source_fx1d, self.simple_source_fy1d)
@@ -170,13 +173,11 @@ class MO_Module(nn.Module):
         norm_total_intensity = torch.matmul(
             self.simple_source_value.view(-1, 1).T, norm_IntensityCon
         )
-        norm_IntensityTemp = self.lens_n_liquid * (self.dfmdg ** 2) * norm_total_intensity
+        norm_IntensityTemp = self.lens_n_liquid * (self.dfmdg**2) * norm_total_intensity
         norm_Intensity = norm_IntensityTemp / self.source_weight
         self.norm_Intensity = norm_Intensity.detach()
 
-
-    def forward(self,
-                source_value: Source):
+    def forward(self, source_value: Source):
         self.update_mask_value()
         # self.source_data is un-learnable
         self.get_valid_source(source_value)
@@ -189,7 +190,9 @@ class MO_Module(nn.Module):
         # 1. calculate pupil_fdata
         mask_fvalue = [self.mask_fvalue_min, self.mask_fvalue_norm, self.mask_fvalue_max]
         for fvalue in mask_fvalue:
-            intensity2D = torch.zeros(self.mask.target_data.shape, dtype=torch.float32, device=self.device)
+            intensity2D = torch.zeros(
+                self.mask.target_data.shape, dtype=torch.float32, device=self.device
+            )
             for i in range(self.simple_source_value.shape[0]):
                 rho2 = (
                     self.mask_fg2m
@@ -203,10 +206,12 @@ class MO_Module(nn.Module):
 
                 valid_source_mask = rho2.le(1)
                 f_calc = (
-                    torch.masked_select(self.mask_fm, valid_source_mask) + self.simple_source_fx1d[i]
+                    torch.masked_select(self.mask_fm, valid_source_mask)
+                    + self.simple_source_fx1d[i]
                 )
                 g_calc = (
-                    torch.masked_select(self.mask_gm, valid_source_mask) + self.simple_source_fy1d[i]
+                    torch.masked_select(self.mask_gm, valid_source_mask)
+                    + self.simple_source_fy1d[i]
                 )
 
                 pupil_fdata = self.cal_pupil(f_calc, g_calc)

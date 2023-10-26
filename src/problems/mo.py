@@ -27,7 +27,7 @@ class MO(ImplicitProblem):
         train_data_loader=None,
         name: str = "MO",
         weight_l2: float = 1000,
-        weight_pvb: float = 8000,
+        weight_pvb: float = 3000,
         vis_in_train: bool = False,
         device: str = "cuda:0",
     ):
@@ -50,6 +50,9 @@ class MO(ImplicitProblem):
         self.vis_in_train = vis_in_train
         # self.device = torch.device(device)
         self.device_id = device
+        self.min_loss = 1e10
+        self.min_pvb = 1e10
+        self.min_l2 = 1e10
 
     def update_source_value(self, source_params):
         if self.SO.module.source_acti == "cosine":
@@ -67,6 +70,14 @@ class MO(ImplicitProblem):
         mo_intensity2D_list, mo_RI_list = self.module(self.source_value)
         return mo_intensity2D_list, mo_RI_list
 
+    def get_mins(self, loss, l2, pvb):
+        if loss.clone().detach().item() < self.min_loss:
+            self.min_loss = loss.clone().detach().item()
+        if l2.clone().detach().item() < self.min_l2:
+            self.min_l2 = l2.clone().detach().item()
+        if pvb.clone().detach().item() < self.min_pvb:
+            self.min_pvb = pvb.clone().detach().item()
+
     def training_step(self, batch):
         AIlist, RIlist = self.forward()
         # binary RI, torch.where creates a tensor with require_grad = False
@@ -83,11 +94,16 @@ class MO(ImplicitProblem):
         l2_val = (RI_norm - self.module.mask.target_data).abs().sum()
         # pvb_val = (RI_norm - RI_min).abs().sum() + (RI_norm - RI_max).abs().sum()
         other_pvb_val = (RI_max - RI_min).abs().sum()
+
+        self.get_mins(loss, l2_val, other_pvb_val)
         self.log(
             {
                 "train/loss": loss.clone().detach(),
                 "train/l2": l2_val.detach().clone(),
                 "train/pvb": other_pvb_val.detach().clone(),
+                "min/loss": self.min_loss,
+                "min/l2": self.min_l2,
+                "min/pvb": self.min_pvb,
             },
             global_step=None,
         )

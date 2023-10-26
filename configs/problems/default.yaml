@@ -1,5 +1,5 @@
 weight_l2: 1000
-weight_pvb: 4000
+weight_pvb: 3000
 device_id: ${module.device_id}
 
 problem_type: darts

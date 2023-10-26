@@ -1,25 +1,26 @@
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
-from src.models.litho.source import Source
 from src.models.litho.img_mask import Mask
+from src.models.litho.source import Source
 
 
 class SO_Module(nn.Module):
-    def __init__(self,
-                source: Source,
-                mask: Mask,
-                source_acti: str = 'sigmoid',
-                source_sigmoid_steepness: float = 10,
-                resist_sigmoid_steepness: float = 60,
-                resist_intensity: float = 0.225,
-                dose_list: list = [0.98, 1.00, 1.02],
-                lens_n_liquid: float = 1.44,
-                lens_reduction: float = 0.25,
-                low_light_thres: float = 0.001,
-                device: str = "cuda:0",
-                ) -> None:
+    def __init__(
+        self,
+        source: Source,
+        mask: Mask,
+        source_acti: str = "sigmoid",
+        source_sigmoid_steepness: float = 10,
+        resist_sigmoid_steepness: float = 30,
+        resist_intensity: float = 0.225,
+        dose_list: list = [0.98, 1.00, 1.02],
+        lens_n_liquid: float = 1.44,
+        lens_reduction: float = 0.25,
+        low_light_thres: float = 0.001,
+        device: str = "cuda:0",
+    ) -> None:
         super().__init__()
 
         self.source = source
@@ -101,9 +102,7 @@ class SO_Module(nn.Module):
             self.mask.target_data = self.mask.data.detach().clone()
 
     def sigmoid_resist(self, aerial) -> torch.Tensor:
-        return torch.sigmoid(
-            self.resist_sigmoid_steepness * (aerial - self.resist_intensity)
-        )
+        return torch.sigmoid(self.resist_sigmoid_steepness * (aerial - self.resist_intensity))
 
     def init_source_params(self) -> None:
         # [-1, 1]
@@ -121,7 +120,6 @@ class SO_Module(nn.Module):
             self.source_params.data[torch.where(self.source.data > 0.5)] = 0.1
             self.source_params.data[torch.where(self.source.data <= 0.5)] = torch.pi - 0.1
 
-
     def update_source_value(self) -> None:
         if self.source_acti == "cosine":
             self.source_value = (1 + torch.cos(self.source_params)) / 2
@@ -132,10 +130,11 @@ class SO_Module(nn.Module):
         else:
             self.source_value = (1 + torch.cos(self.source_params)) / 2
 
-
-    def cal_pupil(self,
-                FX: torch.Tensor,
-                FY: torch.Tensor,) -> torch.Tensor:
+    def cal_pupil(
+        self,
+        FX: torch.Tensor,
+        FY: torch.Tensor,
+    ) -> torch.Tensor:
         R = torch.sqrt(FX**2 + FY**2)  # rho
         fgSquare = torch.square(R)
         # source used
@@ -170,10 +169,9 @@ class SO_Module(nn.Module):
         norm_total_intensity = torch.matmul(
             self.simple_source_value.view(-1, 1).T, norm_IntensityCon
         )
-        norm_IntensityTemp = self.lens_n_liquid * (self.dfmdg ** 2) * norm_total_intensity
+        norm_IntensityTemp = self.lens_n_liquid * (self.dfmdg**2) * norm_total_intensity
         norm_Intensity = norm_IntensityTemp / self.source_weight
         self.norm_Intensity = norm_Intensity.detach()
-
 
     def forward(self, mask_value: Mask) -> tuple[list, list, torch.Tensor]:
         self.update_source_value()
@@ -185,12 +183,20 @@ class SO_Module(nn.Module):
         self.RI_list = []
 
         # 1. calculate pupil_fdata
-        self.mask_fvalue_min = torch.fft.fftshift(torch.fft.fft2(torch.fft.ifftshift(mask_value * self.dose_list[0])))
-        self.mask_fvalue_norm = torch.fft.fftshift(torch.fft.fft2(torch.fft.ifftshift(mask_value * self.dose_list[1])))
-        self.mask_fvalue_max = torch.fft.fftshift(torch.fft.fft2(torch.fft.ifftshift(mask_value * self.dose_list[2])))
+        self.mask_fvalue_min = torch.fft.fftshift(
+            torch.fft.fft2(torch.fft.ifftshift(mask_value * self.dose_list[0]))
+        )
+        self.mask_fvalue_norm = torch.fft.fftshift(
+            torch.fft.fft2(torch.fft.ifftshift(mask_value * self.dose_list[1]))
+        )
+        self.mask_fvalue_max = torch.fft.fftshift(
+            torch.fft.fft2(torch.fft.ifftshift(mask_value * self.dose_list[2]))
+        )
         mask_fvalue = [self.mask_fvalue_min, self.mask_fvalue_norm, self.mask_fvalue_max]
         for fvalue in mask_fvalue:
-            intensity2D = torch.zeros(self.mask.target_data.shape, dtype=torch.float32, device=self.device)
+            intensity2D = torch.zeros(
+                self.mask.target_data.shape, dtype=torch.float32, device=self.device
+            )
             for i in range(self.simple_source_value.shape[0]):
                 rho2 = (
                     self.mask_fg2m
@@ -204,10 +210,12 @@ class SO_Module(nn.Module):
 
                 valid_source_mask = rho2.le(1)
                 f_calc = (
-                    torch.masked_select(self.mask_fm, valid_source_mask) + self.simple_source_fx1d[i]
+                    torch.masked_select(self.mask_fm, valid_source_mask)
+                    + self.simple_source_fx1d[i]
                 )
                 g_calc = (
-                    torch.masked_select(self.mask_gm, valid_source_mask) + self.simple_source_fy1d[i]
+                    torch.masked_select(self.mask_gm, valid_source_mask)
+                    + self.simple_source_fy1d[i]
                 )
 
                 pupil_fdata = self.cal_pupil(f_calc, g_calc)
