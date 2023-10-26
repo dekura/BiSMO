@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-10-22 13:05:39
-LastEditTime: 2023-10-25 22:22:46
+LastEditTime: 2023-10-25 23:43:42
 Contact: cgjcuhk@gmail.com
 Description: the definition of Source optimization problem.
 """
@@ -52,6 +52,10 @@ class SO(ImplicitProblem):
             # mask after activation func
             self.mask_value = self.sigmoid_mask(
                 self.MO.module.mask_sigmoid_steepness * mask_params
+            )
+        elif self.MO.module.mask_acti == "multi":
+            self.mask_value = self.sigmoid_mask(
+                self.MO.module.mask_sigmoid_steepness * (mask_params - 0.5)
             )
         else:
             self.mask_value = self.sigmoid_mask(

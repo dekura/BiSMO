@@ -121,6 +121,10 @@ class MO_Module(nn.Module):
         if self.mask_acti == "sigmoid":
             # mask after activation func
             self.mask_value = self.sigmoid_mask(self.mask_sigmoid_steepness * self.mask_params)
+        elif self.mask_acti == "multi":
+            self.mask_value = self.sigmoid_mask(
+                self.mask_sigmoid_steepness * (self.mask_params - 0.5)
+            )
         else:
             self.mask_value = self.sigmoid_mask(self.mask_sigmoid_steepness * self.mask_params)
         # self.mask.maskfft()
