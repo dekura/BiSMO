@@ -18,15 +18,15 @@ source_acti: sigmoid
 source_sigmoid_steepness: 8
 
 # parameters for lens in SMO model
-lens_n_liquid: 1.414
+lens_n_liquid: 1.44
 lens_reduction: 0.725
 
 low_light_thres: 0.001
 
-resist_sigmoid_steepness: 60
+resist_sigmoid_steepness: 30
 resist_intensity: 0.225
 
 weight_l2: 1000.0
-weight_pvb: 50000.0
+weight_pvb: 3000.0
 
 save_img_folder: ${paths.output_dir}/soed

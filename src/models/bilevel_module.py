@@ -1,5 +1,6 @@
 import sys
-sys.path.append('.')
+
+sys.path.append(".")
 
 from pathlib import Path
 from typing import Any, Optional
@@ -15,11 +16,11 @@ from lightning import LightningModule
 from lightning.pytorch.utilities.types import STEP_OUTPUT
 from torchmetrics import MeanMetric
 
-from src.models.litho.img_mask import Mask
-from src.models.litho.source import Source
-from src.models.litho.lens import LensList
-from src.models.litho.tcc import TCCList
 from src.models.litho.aerial import AerialList
+from src.models.litho.img_mask import Mask
+from src.models.litho.lens import LensList
+from src.models.litho.source import Source
+from src.models.litho.tcc import TCCList
 from src.models.litho.utils import torch_arr_bound
 
 
@@ -35,17 +36,21 @@ class SMOLitModule(LightningModule):
     """
 
     def __init__(
-        self, 
-        source: Source, 
-        mask: Mask, 
-        # lens: LensList, 
-        dose_list: list = [0.98, 1.00, 1.02,], 
-        # dose_coff: list = [1, 1, 1,], 
-        resist_tRef: int = 0.06, 
-        weight_pvb: float = 1.0, 
-        weight_l2: float = 1.0, 
-        # tcc: TCCList, 
-        # aerial: AerialList, 
+        self,
+        source: Source,
+        mask: Mask,
+        # lens: LensList,
+        dose_list: list = [
+            0.98,
+            1.00,
+            1.02,
+        ],
+        # dose_coff: list = [1, 1, 1,],
+        resist_tRef: int = 0.06,
+        weight_pvb: float = 1.0,
+        weight_l2: float = 1.0,
+        # tcc: TCCList,
+        # aerial: AerialList,
         # optimizer: torch.optim.Optimizer,
         # scheduler: torch.optim.lr_scheduler,
         source_acti: str = "sigmoid",
@@ -109,16 +114,16 @@ class SMOLitModule(LightningModule):
         self.sigmoid_source = nn.Sigmoid()
 
         # loss function
-        # self.criterion = 
+        # self.criterion =
         # length = len(self.aerial.image.focusList)
         # lengthD = len(self.aerial.image.doseList)
 
         # for ii in range(length):
-            # pvb, self.aerial.image.RIList is a torch
-            # pvb = torch.sum((self.aerial.image.RIList[ii][0] - self.aerial.image.RIList[ii][1]) ** 2) + torch.sum((self.aerial.image.RIList[ii][2] - self.aerial.image.RIList[ii][1]) ** 2)
-            # mse
-            # l2 = torch.sum((self.aerial.image.RIList[ii][1] - self.mask.data).abs())
-            # print('pvb: ', pvb.sum(), 'l2', l2)
+        # pvb, self.aerial.image.RIList is a torch
+        # pvb = torch.sum((self.aerial.image.RIList[ii][0] - self.aerial.image.RIList[ii][1]) ** 2) + torch.sum((self.aerial.image.RIList[ii][2] - self.aerial.image.RIList[ii][1]) ** 2)
+        # mse
+        # l2 = torch.sum((self.aerial.image.RIList[ii][1] - self.mask.data).abs())
+        # print('pvb: ', pvb.sum(), 'l2', l2)
 
         # self.criterion = nn.MSELoss()
         # self.criterion = nn.SmoothL1Loss + pvb + l2
@@ -133,7 +138,7 @@ class SMOLitModule(LightningModule):
         )
 
     def init_freq_domain_on_device(self):
-        '''
+        """
         na: float = 1.35,
         wavelength: float = 193.0,
         maskxpitch: float = 1280.0,
@@ -158,11 +163,11 @@ class SMOLitModule(LightningModule):
 
         fx = torch.linspace(-self.fnum * self.detaf, self.fnum * self.detaf, 2 * self.fnum + 1)
         fy = torch.linspace(-self.gnum * self.detag, self.gnum * self.detag, 2 * self.gnum + 1)
-        
+
         form a meshgrid
 
         FX, FY = torch.meshgrid(fx, fy, indexing="xy")
-        '''
+        """
 
         device = self.device
         # hyper-parameters, int: 18
@@ -323,7 +328,7 @@ class SMOLitModule(LightningModule):
         self.intensity2D = intensity2D / self.source_weight
         self.intensity2D = self.intensity2D / self.norm_Intensity
         self.RI = self.sigmoid_resist(self.intensity2D)
-        # real RI, 
+        # real RI,
         # instead self.hparams.target_intensity to
         # self.resist_tRef
         # self.RI = (self.RI >= self.hparams.target_intensity).to(torch.float64)
@@ -337,7 +342,9 @@ class SMOLitModule(LightningModule):
     def model_step(self):
         AI, RI, RIlist = self.forward()
         # loss, pvb, l2
-        pvb = (torch.sum((RIlist[0] - RI) ** 2) + torch.sum((RIlist[2] - RI) ** 2)).requires_grad_(True)
+        pvb = (torch.sum((RIlist[0] - RI) ** 2) + torch.sum((RIlist[2] - RI) ** 2)).requires_grad_(
+            True
+        )
         l2 = self.criterion(RI, self.mask.target_data)
         # origin loss
         # loss = self.criterion(RI, self.mask.target_data)
@@ -361,7 +368,6 @@ class SMOLitModule(LightningModule):
 
         self.log("train/pvb", pvb, on_step=False, on_epoch=True, prog_bar=False, logger=True)
         return {"loss": loss}
-    
 
     def validation_step(self, batch: Any, batch_idx: int):
         loss, _, _, AI, RI = self.model_step()
@@ -453,24 +459,22 @@ class SMOLitModule(LightningModule):
 
 if __name__ == "__main__":
     # _ = SMOLitModule(None, None, None)
-    mask_path = 'data/soed/ibm_opc_test/mask/t1_0_mask.png'
-    m = Mask(layout_path = mask_path, target_path = mask_path)
-    s = Source(source_type = 'annular', 
-               maskxpitch = 1280, 
-               maskypitch = 1280, 
-               sigma_in = 0.63, 
-               sigma_out = 0.95, 
-               )
-    
-    o = LensList(nLiquid = 1.414, 
-                 wavelength = 193.0, 
-                 defocus = 0.0, 
-                 maskxpitch = 1280, 
-                 maskypitch = 1280, 
-                 na = 1.35, 
-                 )
-    _ = SMOLitModule(source=s, 
-                     mask=m, 
-                     lens=o)
+    mask_path = "data/soed/ibm_opc_test/mask/t1_0_mask.png"
+    m = Mask(layout_path=mask_path, target_path=mask_path)
+    s = Source(
+        source_type="annular",
+        maskxpitch=1280,
+        maskypitch=1280,
+        sigma_in=0.63,
+        sigma_out=0.95,
+    )
 
-
+    o = LensList(
+        nLiquid=1.44,
+        wavelength=193.0,
+        defocus=0.0,
+        maskxpitch=1280,
+        maskypitch=1280,
+        na=1.35,
+    )
+    _ = SMOLitModule(source=s, mask=m, lens=o)

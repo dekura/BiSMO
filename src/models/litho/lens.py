@@ -15,7 +15,7 @@ class Lens:
     """Model lens
     Args:
         na : 1.35
-        nLiquid : 1.414
+        nLiquid : 1.44
         wavelength (nm) : 193.0
         defocus (nm) : 0.0
         maskxpitch (nm): 1000
@@ -26,7 +26,7 @@ class Lens:
     def __init__(
         self,
         na: float = 1.35,
-        nLiquid: float = 1.414,
+        nLiquid: float = 1.44,
         wavelength: float = 193.0,
         defocus: float = 0.0,
         maskxpitch: float = 1000,
@@ -84,7 +84,7 @@ class LensList(Lens):
     def __init__(
         self,
         na: float = 1.35,
-        nLiquid: float = 1.414,
+        nLiquid: float = 1.44,
         wavelength: float = 193.0,
         defocus: float = 0.0,
         maskxpitch: float = 1000,
@@ -95,10 +95,7 @@ class LensList(Lens):
         self.focusCoef = [1.0]
         self.fDataList = []
         self.sDataList = []
-
-        """
-        Process calculation
-        """
+        """Process calculation."""
         self.calculate()
 
     def calculate(self):

@@ -1,14 +1,14 @@
-'''
+"""
 Description: MO with Abbe's Approach.
 Mask: self.target_data is Unchanging, while self.data is changing.
 mask.data -> self.mask_params -> self.mask_value / self.mask.fvalue
-'''
+"""
 
 from pathlib import Path
 from typing import Any, Optional
-import cv2
 
 import aim
+import cv2
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -49,7 +49,7 @@ class MOLitModule(LightningModule):
         # source_acti: str = "sigmoid",
         mask_acti: str = "sigmoid",
         # source_type: str = 'annular',
-        mask_sigmoid_steepness: float = 4,
+        mask_sigmoid_steepness: float = 9,
         # source_sigmoid_steepness: float = 8,
         lens_n_liquid: float = 1.44,
         lens_reduction: float = 0.25,
@@ -155,7 +155,6 @@ class MOLitModule(LightningModule):
             self.mask_params.data[torch.where(self.mask.data > 0.5)] = 2 - 0.02
             self.mask_params.data.sub_(0.99)
 
-
     def init_source_params(self) -> None:
         # [-1, 1]
         self.source_params = nn.Parameter(torch.zeros(self.s.data.shape))
@@ -175,7 +174,7 @@ class MOLitModule(LightningModule):
         self.source_value = self.source_params
 
     def update_mask_value(self) -> None:
-        if self.hparams.mask_acti == 'sigmoid':
+        if self.hparams.mask_acti == "sigmoid":
             # mask after activation func
             self.mask_value = self.sigmoid_mask(
                 self.hparams.mask_sigmoid_steepness * self.mask_params
@@ -185,9 +184,15 @@ class MOLitModule(LightningModule):
                 self.hparams.mask_sigmoid_steepness * self.mask_params
             )
         # self.mask.maskfft()
-        self.mask_fvalue_min = torch.fft.fftshift(torch.fft.fft2(torch.fft.ifftshift(self.mask_value * self.dose_list[0])))
-        self.mask_fvalue_norm = torch.fft.fftshift(torch.fft.fft2(torch.fft.ifftshift(self.mask_value * self.dose_list[1])))
-        self.mask_fvalue_max = torch.fft.fftshift(torch.fft.fft2(torch.fft.ifftshift(self.mask_value * self.dose_list[2])))
+        self.mask_fvalue_min = torch.fft.fftshift(
+            torch.fft.fft2(torch.fft.ifftshift(self.mask_value * self.dose_list[0]))
+        )
+        self.mask_fvalue_norm = torch.fft.fftshift(
+            torch.fft.fft2(torch.fft.ifftshift(self.mask_value * self.dose_list[1]))
+        )
+        self.mask_fvalue_max = torch.fft.fftshift(
+            torch.fft.fft2(torch.fft.ifftshift(self.mask_value * self.dose_list[2]))
+        )
 
     def update_source_value(self) -> None:
         if self.hparams.source_acti == "cosine":
@@ -246,19 +251,17 @@ class MOLitModule(LightningModule):
         self.simple_source_fxy2 = self.simple_source_fx1d.pow(2) + self.simple_source_fy1d.pow(2)
         self.source_weight = torch.sum(self.source_data)
         norm_pupil_fdata = self.cal_pupil(self.simple_source_fx1d, self.simple_source_fy1d)
-        
+
         # get_norm_intensity
         norm_tempHAber = self.norm_spectrum_calc * norm_pupil_fdata
         norm_ExyzFrequency = norm_tempHAber.view(-1, 1)
         norm_Exyz = torch.fft.fftshift(torch.fft.fft(norm_ExyzFrequency))
         norm_IntensityCon = torch.abs(norm_Exyz * torch.conj(norm_Exyz))
-        norm_total_intensity = torch.matmul(
-            self.source_data.view(-1, 1).T, norm_IntensityCon
-        )
-        norm_IntensityTemp = self.hparams.lens_n_liquid * (self.dfmdg ** 2) * norm_total_intensity
+        norm_total_intensity = torch.matmul(self.source_data.view(-1, 1).T, norm_IntensityCon)
+        norm_IntensityTemp = self.hparams.lens_n_liquid * (self.dfmdg**2) * norm_total_intensity
         norm_Intensity = norm_IntensityTemp / self.source_weight
         self.norm_Intensity = norm_Intensity.detach()
-        
+
         # obtain intensity
         self.intensity2D_list = []
         self.RI_list = []
@@ -266,7 +269,9 @@ class MOLitModule(LightningModule):
         # 1. calculate pupil_fdata
         mask_fvalue = [self.mask_fvalue_min, self.mask_fvalue_norm, self.mask_fvalue_max]
         for fvalue in mask_fvalue:
-            intensity2D = torch.zeros(self.mask.target_data.shape, dtype=torch.float32, device=self.device)
+            intensity2D = torch.zeros(
+                self.mask.target_data.shape, dtype=torch.float32, device=self.device
+            )
             for i in range(self.source_data.shape[0]):
                 rho2 = (
                     self.mask_fg2m
@@ -280,10 +285,12 @@ class MOLitModule(LightningModule):
 
                 valid_source_mask = rho2.le(1)
                 f_calc = (
-                    torch.masked_select(self.mask_fm, valid_source_mask) + self.simple_source_fx1d[i]
+                    torch.masked_select(self.mask_fm, valid_source_mask)
+                    + self.simple_source_fx1d[i]
                 )
                 g_calc = (
-                    torch.masked_select(self.mask_gm, valid_source_mask) + self.simple_source_fy1d[i]
+                    torch.masked_select(self.mask_gm, valid_source_mask)
+                    + self.simple_source_fy1d[i]
                 )
 
                 pupil_fdata = self.cal_pupil(f_calc, g_calc)
@@ -309,7 +316,6 @@ class MOLitModule(LightningModule):
             self.intensity2D_list.append(normed_intensity2D)
             self.RI_list.append(self.sigmoid_resist(normed_intensity2D))
 
-
         # 3. calculate intensity
         # self.intensity2D = intensity2D / self.source_weight
         # self.intensity2D = self.intensity2D / self.norm_Intensity
@@ -317,7 +323,6 @@ class MOLitModule(LightningModule):
 
         # return self.intensity2D, self.RI
         return self.intensity2D_list, self.RI_list
-
 
     def get_norm_intensity(self) -> None:
         norm_pupil_fdata = self.cal_pupil(self.simple_source_fx1d, self.simple_source_fy1d)
@@ -395,12 +400,18 @@ class MOLitModule(LightningModule):
         AI, _, RIlist = self.forward()
         # l2, pvb
         l2 = self.criterion(RIlist[1], self.mask.target_data)
-        pvb = (self.criterion(RIlist[0], RIlist[1]) + self.criterion(RIlist[2], RIlist[1])) * self.mask.target_data.shape[0] * self.mask.target_data.shape[1]
+        pvb = (
+            (self.criterion(RIlist[0], RIlist[1]) + self.criterion(RIlist[2], RIlist[1]))
+            * self.mask.target_data.shape[0]
+            * self.mask.target_data.shape[1]
+        )
         loss = l2 * self.hparams.weight_l2 + pvb * self.hparams.weight_pvb
         # loss.requires_grad_(True)
         return l2, pvb, loss, AI, RIlist[1]
-    
-    def model_step(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+
+    def model_step(
+        self,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         AIlist, RIlist = self.litho()
         # binary RI
         RI_min = torch.where(RIlist[0] > self.hparams.target_intensity, 1, 0).float()
@@ -408,7 +419,11 @@ class MOLitModule(LightningModule):
         RI_max = torch.where(RIlist[2] > self.hparams.target_intensity, 1, 0).float()
         # l2, pvb
         l2 = self.criterion(RI_norm, self.mask.target_data)
-        pvb = (self.criterion(RI_norm, RI_min) + self.criterion(RI_norm, RI_max)) * self.mask.target_data.shape[0] * self.mask.target_data.shape[1]
+        pvb = (
+            (self.criterion(RI_norm, RI_min) + self.criterion(RI_norm, RI_max))
+            * self.mask.target_data.shape[0]
+            * self.mask.target_data.shape[1]
+        )
         loss = l2 * self.hparams.weight_l2 + pvb * self.hparams.weight_pvb
         loss.requires_grad_(True)
         return l2, pvb, loss, AIlist[1], RI_norm
@@ -480,13 +495,13 @@ class MOLitModule(LightningModule):
     def test_step(self, batch: Any, batch_idx: int) -> None:
         _, _, _, AI, RI = self.model_step()
         save_img_folder = Path(self.hparams.save_img_folder) / self.mask.dataset_name
-        AI_folder = save_img_folder / f"moed_AI"
+        AI_folder = save_img_folder / "moed_AI"
         AI_folder.mkdir(parents=True, exist_ok=True)
-        
-        RI_folder = save_img_folder / f"moed_RI"
+
+        RI_folder = save_img_folder / "moed_RI"
         RI_folder.mkdir(parents=True, exist_ok=True)
 
-        mask_folder = save_img_folder / f"moed_mask"
+        mask_folder = save_img_folder / "moed_mask"
         mask_folder.mkdir(parents=True, exist_ok=True)
 
         RI_moed = RI.detach().clone()
