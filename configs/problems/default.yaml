@@ -20,7 +20,7 @@ mo:
     type: ${problems.problem_type}
     retain_graph: True
     log_step: 10
-    unroll_steps: ${problems.unroll_steps}
+    # unroll_steps: ${problems.unroll_steps}
 
   optimizer_cfg:
     _target_: torch.optim.Adam
