@@ -12,7 +12,7 @@ python=/home/local/eda13/gc29434/miniconda3/envs/smo/bin/python
 device_id=1
 problems_type=nmn
 
-unroll_steps="100 50 30 4 2"
+unroll_steps="18 25"
 
 for i in $unroll_steps; do
     echo "Starting mo for: problems ["$problems_type"] mask1 unroll_steps="$i

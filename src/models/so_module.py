@@ -12,7 +12,7 @@ class SO_Module(nn.Module):
         source: Source,
         mask: Mask,
         source_acti: str = "sigmoid",
-        source_sigmoid_steepness: float = 10,
+        source_sigmoid_steepness: float = 8,
         resist_sigmoid_steepness: float = 30,
         resist_intensity: float = 0.225,
         dose_list: list = [0.98, 1.00, 1.02],

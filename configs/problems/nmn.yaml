@@ -3,7 +3,7 @@ defaults:
 
 problem_type: neumann
 nmn_iters: 3
-unroll_steps: 4
+unroll_steps: 18
 
 mo:
   config:

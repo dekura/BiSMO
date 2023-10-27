@@ -6,9 +6,9 @@ problem_type: darts
 # for neumann_iterations
 nmn_iters: 3
 # for cg_iterations
-cg_iters: 2
+cg_iters: 3
 # for both cg and neumann
-unroll_steps: 1
+unroll_steps: 2
 
 mo:
   _target_: src.problems.mo.MO
