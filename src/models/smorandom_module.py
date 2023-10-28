@@ -50,7 +50,7 @@ class SMOLitModule(LightningModule):
         source_acti: str = "sigmoid",
         mask_acti: str = "sigmoid",
         source_type: str = 'annular',
-        mask_sigmoid_steepness: float = 4,
+        mask_sigmoid_steepness: float = 9,
         mask_sigmoid_tr: float = 0.5,
         source_sigmoid_steepness: float = 8,
         lens_n_liquid: float = 1.44,
@@ -60,7 +60,7 @@ class SMOLitModule(LightningModule):
         visual_in_val: bool = True,
         resist_sigmoid_steepness: float = 30,
         weight_l2: float = 1000.00,
-        weight_pvb: float = 8000.00,
+        weight_pvb: float = 3000.00,
         save_img_folder: str = "./data/smoed",
     ) -> None:
         super().__init__()
@@ -147,7 +147,8 @@ class SMOLitModule(LightningModule):
 
     def init_mask_params(self) -> None:
         # learnable, [-1, 1]
-        self.mask_params = nn.Parameter(self.mask.data.float())
+        # self.mask_params = nn.Parameter(self.mask.data.float())
+        self.mask_params = nn.Parameter(torch.zeros(self.mask.data.shape))
         if self.hparams.mask_acti == "sigmoid":
             self.mask_params.data[torch.where(self.mask.data > 0.5)] = 2 - 0.02
             self.mask_params.data.sub_(0.99)
@@ -159,7 +160,8 @@ class SMOLitModule(LightningModule):
 
     def init_source_params(self) -> None:
         # [-1, 1]
-        self.source_params = nn.Parameter(self.s.data.float())
+        # self.source_params = nn.Parameter(self.s.data.float())
+        self.source_params = nn.Parameter(torch.zeros(self.s.data.shape))
 
         # for sigmoid
         if self.hparams.source_acti == "sigmoid":
@@ -203,7 +205,7 @@ class SMOLitModule(LightningModule):
             self.source_value = (1 + torch.cos(self.source_params)) / 2
 
     def cal_pupil(self, FX, FY) -> torch.Tensor:
-        R = torch.sqrt(FX**2 + FY**2)  # rho
+        R = torch.sqrt(FX**2 + FY**2)
         fgSquare = torch.square(R)
         NA = self.s.na
         n_liquid = self.hparams.lens_n_liquid
@@ -359,12 +361,16 @@ class SMOLitModule(LightningModule):
         l2_error = l2.detach().clone()
         pvb_error = pvb.detach().clone()
         other_pvb_error = other_pvb.detach().clone()
-        binary_AI = RI.detach().clone()
-        vis_pvb = RI_pvb.detach().clone()
+        # binary_AI = RI.detach().clone()
+        # vis_pvb = RI_pvb.detach().clone()
 
         self.log("val/l2", l2_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
         self.log("val/pvb", pvb_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
         self.log("val/other_pvb", other_pvb_error, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+
+        masked_smoed = torch.where(self.mask_value > 0.5, 1.0, 0.0).float()
+
+        source_smoed = torch.where(self.source_value > 0.5, 1.0, 0.0).float()
 
         if self.hparams.visual_in_val:
             if self.global_rank == 0:
@@ -373,12 +379,15 @@ class SMOLitModule(LightningModule):
                     aim_images = [
                         aim.Image(transform(i))
                         for i in [
-                            self.s.data.clone().detach(),
-                            self.mask.data,
-                            self.mask.target_data,
-                            binary_AI.to(torch.float32),
-                            # RI,
-                            vis_pvb,
+                            # self.s.data.clone().detach(),
+                            # self.mask.data,
+                            self.source_value.detach().clone(),
+                            source_smoed.detach().clone(),
+                            self.mask.target_data.float().detach().clone(),
+                            masked_smoed.detach().clone(),
+                            RI.detach().clone(),
+                            # binary_AI.to(torch.float32),
+                            RI_pvb.detach().clone(),
                             AI.clone().detach(),
                         ]
                     ]
@@ -398,14 +407,14 @@ class SMOLitModule(LightningModule):
         RI_folder = save_img_folder / f"RI"
         RI_folder.mkdir(parents=True, exist_ok=True)
 
-        # mask_folder = save_img_folder / f"mask"
-        # mask_folder.mkdir(parents=True, exist_ok=True)
-
         pvb_folder = save_img_folder / f"pvb"
         pvb_folder.mkdir(parents=True, exist_ok=True)
 
         source_folder = save_img_folder / f"source"
         source_folder.mkdir(parents=True, exist_ok=True)
+
+        gray_source_folder = save_img_folder / f"gray_source"
+        gray_source_folder.mkdir(parents=True, exist_ok=True)
 
         masked_folder = save_img_folder / f"masked"
         masked_folder.mkdir(parents=True, exist_ok=True)
@@ -414,21 +423,22 @@ class SMOLitModule(LightningModule):
         AI_smoed = AI.detach().clone()
         RI_pvb_smoed = RI_pvb.detach().clone()
         masked_smoed = torch.where(self.mask_value > 0.5, 1, 0)
-        sourece = torch.where(self.source_params > 0., 1, 0)
+        sourece = torch.where(self.source_value > 0.5, 1, 0)
+        gray_source = self.source_value.detach().clone()
 
         AI_smoed_path = AI_folder / self.mask.mask_name
         RI_smoed_path = RI_folder / self.mask.mask_name
         RI_pvb_smoed_path = pvb_folder / self.mask.mask_name
         masked_smoed_path = masked_folder / self.mask.mask_name
         source_smoed_path = source_folder / self.mask.mask_name
-        # mask_path = mask_folder / self.mask.mask_name
+        gray_source_path = gray_source_folder / self.mask.mask_name
 
         U.save_image(AI_smoed.to(torch.float32), AI_smoed_path)
         U.save_image(RI_smoed.to(torch.float32), RI_smoed_path)
         U.save_image(RI_pvb_smoed.to(torch.float32), RI_pvb_smoed_path)
         U.save_image(masked_smoed.to(torch.float32), masked_smoed_path)
         U.save_image(sourece.to(torch.float32), source_smoed_path)
-        # U.save_image(self.mask.data, mask_path)
+        U.save_image(gray_source.to(torch.float32), gray_source_path)
 
     def configure_optimizers(self):
         """Choose what optimizers and learning-rate schedulers to use in your optimization.

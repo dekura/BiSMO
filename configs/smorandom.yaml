@@ -5,9 +5,9 @@
 defaults:
   - _self_
   - source: iccad13
-  - mask: testcase7
+  - mask: img_mask
   - data: dummy
-  - model: moabbe_iccad13
+  - model: smorandom_iccad13
   - callbacks: iccad13
   - logger: aim
   - trainer: smo
@@ -25,7 +25,7 @@ defaults:
   # debugging config (enable through command line, e.g. `python train.py debug=default)
   - debug: null
 # Mask
-task_name: "moabbe"
+task_name: "soabbe"
 
 # tags to help you identify your experiments
 # you can overwrite this in experiment configs
