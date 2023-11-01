@@ -2,7 +2,7 @@
  # @Author: Guojin Chen @ CUHK-CSE
  # @Homepage: https://gjchen.me
  # @Date: 2023-10-23 17:32:01
- # @LastEditTime: 2023-10-28 13:27:48
+ # @LastEditTime: 2023-11-01 09:29:19
  # @Contact: cgjcuhk@gmail.com
  # @Description:
 ###
@@ -11,8 +11,9 @@ layout_folder=/home/local/eda13/gc29434/phd/projects/SMO-DAC24-codes/data/ispd_d
 
 device_id=0
 problems_type=cg
+list_cg="44 42 41"
 
-for i in $(seq 45 -1 1); do
+for i in $list_cg; do
     layout_path=$layout_folder"ispd_c"$i".png"
     echo "Starting mo on device $device_id for: problems [$problems_type] mask $i"
     echo $layout_path
