@@ -60,6 +60,8 @@ class SMOLitModule(LightningModule):
         resist_sigmoid_steepness: float = 30,
         weight_l2: float = 1000.00,
         weight_pvb: float = 3000.00,
+        mo_frequency: float = 50,
+        so_frequency: float = 10,
         save_img_folder: str = "./data/smoed",
     ) -> None:
         super().__init__()
@@ -86,15 +88,9 @@ class SMOLitModule(LightningModule):
         self.train_loss = MeanMetric()
         self.val_loss = MeanMetric()
 
-        # activation
-        self.sigmoid_mask = nn.Sigmoid()
-        self.sigmoid_source = nn.Sigmoid()
-
         # init
         self.SO = self.init_SO()
         self.MO = self.init_MO()
-        # self.init_source_params()
-        # self.init_mask_params()
 
     def init_SO(self):
         return SO_Module(self.s, 
@@ -125,14 +121,23 @@ class SMOLitModule(LightningModule):
                          )
 
     def model_step(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        flag = False
+        switch_flag = self.current_epoch % (self.hparams.mo_frequency + self.hparams.so_frequency)
+        self.mo_flag = switch_flag < self.hparams.mo_frequency
+        self.so_flag = switch_flag < (self.hparams.mo_frequency + self.hparams.mo_frequency)
         AIlist = []
         RIlist = []
-        if flag:
-            AIlist, RIlist = self.SO.forward(self.MO.mask_value)
+
+        if self.mo_flag:
+            self.SO.update_source_value()
+            AIlist, RIlist = self.MO.forward(self.SO.source_value.detach().clone())
+        elif self.so_flag:
+            self.MO.update_mask_value()
+            AIlist, RIlist = self.SO.forward(self.MO.mask_value.detach().clone())
         else:
-            AIlist, RIlist = self.MO.forward(self.SO.source_value)
-        # AIlist, RIlist = self.forward()
+            # default MO.
+            self.SO.update_source_value()
+            AIlist, RIlist = self.MO.forward(self.SO.source_value.detach().clone())
+
 
         RI_min = torch.where(RIlist[0] > 0.5, 1.0, 0.0).float()
         RI_norm = torch.where(RIlist[1] > 0.5, 1.0, 0.0).float()
@@ -143,7 +148,7 @@ class SMOLitModule(LightningModule):
         l2 = self.criterion(RIlist[1], self.mask.target_data.float())
         pvb = self.criterion(RIlist[1], RIlist[0]) + self.criterion(RIlist[1], RIlist[2])
         loss = l2 * self.hparams.weight_l2 + pvb * self.hparams.weight_pvb
-        
+
         l2_val = (RI_norm - self.mask.target_data).abs().sum()
         pvb_val = (RI_norm - RI_min).abs().sum() + (RI_norm - RI_max).abs().sum()
         other_pvb_val = (RI_max - RI_min).abs().sum()
@@ -151,7 +156,22 @@ class SMOLitModule(LightningModule):
         return l2_val, pvb_val, other_pvb_val, loss, AIlist[1], RI_norm, RI_pvb
 
     def training_step(self, batch: Any, batch_idx: int) -> torch.Tensor:
+        so_opt, mo_opt = self.optimizers(use_pl_optimizer=True)
+        so_opt = so_opt.optimizer
+        mo_opt = mo_opt.optimizer
+        so_sch, mo_sch = self.lr_schedulers()
         l2, pvb, other_pvb, loss, _, _, _ = self.model_step()
+
+        if self.mo_flag:
+            mo_opt.zero_grad()
+            self.manual_backward(loss)
+            mo_opt.step()
+            # mo_sch.step(self.trainer.callback_metrics['train/loss'])
+        elif self.so_flag:
+            so_opt.zero_grad()
+            self.manual_backward(loss)
+            so_opt.step()
+            # so_sch.step(self.trainer.callback_metrics['train/loss'])
 
         # update and log metrics
         self.train_loss(loss)

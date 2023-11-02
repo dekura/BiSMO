@@ -35,7 +35,7 @@ log = utils.get_pylogger(__name__)
 
 
 @utils.task_wrapper
-def mo(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+def smo(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
     # assert cfg.ckpt_path
     # TODO What should be assert?
@@ -109,7 +109,7 @@ def main(cfg: DictConfig) -> Optional[float]:
     # (e.g. ask for tags if none are provided in cfg, print cfg tree, etc.)
     utils.extras(cfg)
 
-    metric_dict, _ = mo(cfg)
+    metric_dict, _ = smo(cfg)
 
     metric_value = utils.get_metric_value(
         metric_dict=metric_dict, metric_name=cfg.get("optimized_metric")

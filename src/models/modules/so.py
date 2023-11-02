@@ -1,7 +1,6 @@
 '''
-add random smo.
+add rdsmo.
 '''
-
 import torch
 from torch import nn
 
@@ -51,7 +50,7 @@ class SO_Module(nn.Module):
 
         self.device = torch.device(device)
 
-        self.source_value = self.source.data.float().to(self.device)
+        # self.source_value = self.source.data.float().to(self.device)
         self.init_freq_domain_on_device()
         # create a param 'self.source_params'
         self.init_source_params()
@@ -137,7 +136,7 @@ class SO_Module(nn.Module):
     def cal_pupil(self,
                 FX: torch.Tensor,
                 FY: torch.Tensor,) -> torch.Tensor:
-        R = torch.sqrt(FX**2 + FY**2)  # rho
+        R = torch.sqrt(FX ** 2 + FY ** 2)
         fgSquare = torch.square(R)
         # source used
         NA = self.source.na
@@ -145,7 +144,7 @@ class SO_Module(nn.Module):
         M = self.lens_reduction
         obliquityFactor = torch.sqrt(
             torch.sqrt(
-                (1 - (M**2 * NA**2) * fgSquare) / (1 - ((NA / n_liquid) ** 2) * fgSquare)
+                (1 - (M ** 2 * NA ** 2) * fgSquare) / (1 - ((NA / n_liquid) ** 2) * fgSquare)
             )
         )
         # no aberrations

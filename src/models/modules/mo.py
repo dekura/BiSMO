@@ -1,7 +1,6 @@
 '''
-add random smo.
+add rdsmo.
 '''
-
 import torch
 from torch import nn
 
@@ -51,7 +50,7 @@ class MO_Module(nn.Module):
 
         self.device = torch.device(device)
 
-        self.mask_value = self.mask.target_data.float().to(self.device)
+        # self.mask_value = self.mask.target_data.float().to(self.device)
         self.init_freq_domain_on_device()
         # define mask_params
         self.init_mask_params()
@@ -103,7 +102,7 @@ class MO_Module(nn.Module):
 
     def init_mask_params(self) -> None:
         # learnable, [-1, 1]
-        self.mask_params = nn.Parameter(torch.zeros(self.mask.data.shape))
+        self.mask_params = nn.Parameter(torch.zeros(self.mask.target_data.shape))
         if self.mask_acti == "sigmoid":
             self.mask_params.data[torch.where(self.mask.data > 0.5)] = 2 - 0.02
             self.mask_params.data.sub_(0.99)
@@ -111,7 +110,6 @@ class MO_Module(nn.Module):
             # default sigmoid
             self.mask_params.data[torch.where(self.mask.data > 0.5)] = 2 - 0.02
             self.mask_params.data.sub_(0.99)
-        # self.mask_value = self.mask_params
 
     def sigmoid_resist(self, aerial) -> torch.Tensor:
         return torch.sigmoid(
@@ -133,10 +131,11 @@ class MO_Module(nn.Module):
         self.mask_fvalue_norm = torch.fft.fftshift(torch.fft.fft2(torch.fft.ifftshift(self.mask_value * self.dose_list[1])))
         self.mask_fvalue_max = torch.fft.fftshift(torch.fft.fft2(torch.fft.ifftshift(self.mask_value * self.dose_list[2])))
 
+
     def cal_pupil(self,
                 FX: torch.Tensor,
                 FY: torch.Tensor,) -> torch.Tensor:
-        R = torch.sqrt(FX**2 + FY**2)  # rho
+        R = torch.sqrt(FX ** 2 + FY ** 2)
         fgSquare = torch.square(R)
         # source used
         NA = self.source.na
@@ -144,13 +143,13 @@ class MO_Module(nn.Module):
         M = self.lens_reduction
         obliquityFactor = torch.sqrt(
             torch.sqrt(
-                (1 - (M**2 * NA**2) * fgSquare) / (1 - ((NA / n_liquid) ** 2) * fgSquare)
+                (1 - (M ** 2 * NA ** 2) * fgSquare) / (1 - ((NA / n_liquid) ** 2) * fgSquare)
             )
         )
         # no aberrations
         return obliquityFactor * (1 + 0j)
 
-    def get_valid_source(self, source_value):
+    def get_valid_source(self, source_value: torch.Tensor):
         self.simple_source_value = torch.reshape(source_value, (-1, 1)).to(self.device)
         high_light_mask = self.simple_source_value.ge(self.low_light_thres).to(self.device)
 

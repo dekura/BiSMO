@@ -1,41 +1,60 @@
-# @package _global_
+_target_: src.models.rdsmo_module.SMOLitModule
 
-# specify here default configuration
-# order of defaults determines the order in which configs override each other
-defaults:
-  - _self_
-  - source: iccad13
-  - mask: img_mask
-  - data: dummy
-  - model: rdsmo_iccad13
-  - callbacks: iccad13
-  - logger: aim
-  - trainer: smo
-  - paths: default
-  - extras: default
-  - hydra: default
-  # experiment configs allow for version control of specific hyperparameters
-  # e.g. best hyperparameters for given model and datamodule
-  - experiment: null
-  # config for hyperparameter optimization
-  - hparams_search: null
-  # optional local config for machine/user specific settings
-  # it's optional since it doesn't need to exist and is excluded from version control
-  - optional local: default
-  # debugging config (enable through command line, e.g. `python train.py debug=default)
-  - debug: null
-# Mask
-task_name: "soabbe"
+so_optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 0.01
+  weight_decay: 0.0
 
-# tags to help you identify your experiments
-# you can overwrite this in experiment configs
-# overwrite from command line with `python train.py tags="[first_tag, second_tag]"`
-tags: ["dev"]
+so_scheduler:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _partial_: true
+  mode: min
+  factor: 0.1
+  patience: 20
 
-smo: True
+mo_optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 0.01
+  weight_decay: 0.0
 
-ckpt_path: null
+# mo_scheduler:
+#   _target_: torch.optim.lr_scheduler.LambdaLR
+#   _partial_: true
+#   lr_lambda: 0.5
 
-seed: null
 
-inference: True
+mo_scheduler:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _partial_: true
+  mode: min
+  factor: 0.1
+  patience: 20
+
+# choose from cosine | sigmoid
+source_acti: sigmoid
+source_sigmoid_steepness: 8
+
+mask_acti: sigmoid
+mask_sigmoid_steepness: 9
+mask_sigmoid_tr: 0.0
+
+# parameters for lens in SMO model
+lens_n_liquid: 1.44
+lens_reduction: 0.25
+
+
+
+low_light_thres: 0.001
+
+resist_sigmoid_steepness: 30
+resist_intensity: 0.225
+
+weight_l2: 1000.0
+weight_pvb: 3000.0
+
+mo_frequency: 50
+so_frequency: 10
+
+save_img_folder: ${paths.output_dir}/rdsmo
