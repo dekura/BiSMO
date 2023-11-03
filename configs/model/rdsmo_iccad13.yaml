@@ -1,0 +1,59 @@
+_target_: src.models.rdsmo_module.SMOLitModule
+
+
+
+
+so_optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 0.01
+  weight_decay: 0.0
+
+# so_scheduler:
+#   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+#   _partial_: true
+#   mode: min
+#   factor: 0.1
+#   patience: 20
+
+mo_optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 0.01
+  weight_decay: 0.0
+
+# mo_scheduler:
+#   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+#   _partial_: true
+#   mode: min
+#   factor: 0.1
+#   patience: 20
+
+# choose from cosine | sigmoid
+source_acti: sigmoid
+source_sigmoid_steepness: 8
+
+mask_acti: sigmoid
+mask_sigmoid_steepness: 9
+
+# parameters for lens in SMO model
+lens_n_liquid: 1.44
+lens_reduction: 0.25
+
+
+
+low_light_thres: 0.001
+
+resist_sigmoid_steepness: 30
+resist_intensity: 0.225
+
+weight_l2: 1000.0
+weight_pvb: 3000.0
+
+
+# alternating frequence
+alter_epoch: 20
+
+vis_n_epoch: 2
+
+save_img_folder: ${paths.output_dir}/rdsmo

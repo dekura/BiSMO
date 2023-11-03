@@ -3,7 +3,7 @@ defaults:
 
 # perform a validation loop every N training epochs
 max_epochs: 300
-check_val_every_n_epoch: 50
+check_val_every_n_epoch: 300
 log_every_n_steps: 1
 
 # change to gpu
