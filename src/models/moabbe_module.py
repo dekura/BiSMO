@@ -48,7 +48,7 @@ class MOLitModule(LightningModule):
         dose_list: list = [0.98, 1.00, 1.02],
         mask_acti: str = "sigmoid",
         mask_sigmoid_steepness: float = 9,
-        mask_sigmoid_tr: float = 0.0,
+        mask_sigmoid_tr: float = 0.5,
         lens_n_liquid: float = 1.44,
         lens_reduction: float = 0.25,
         resist_intensity: float = 0.225,
@@ -144,12 +144,12 @@ class MOLitModule(LightningModule):
         # learnable, [-1, 1]
         self.mask_params = nn.Parameter(self.mask.data.float())
         if self.hparams.mask_acti == "sigmoid":
-            self.mask_params.data[torch.where(self.mask.data > 0.5)] = 2 - 0.02
-            self.mask_params.data.sub_(0.99)
+            self.mask_params.data[torch.where(self.mask.data > 0.5)] = 2
+            self.mask_params.data.sub_(1)
         else:
             # default sigmoid
-            self.mask_params.data[torch.where(self.mask.data > 0.5)] = 2 - 0.02
-            self.mask_params.data.sub_(0.99)
+            self.mask_params.data[torch.where(self.mask.data > 0.5)] = 2
+            self.mask_params.data.sub_(1)
 
     def update_mask_value(self) -> None:
         if self.hparams.mask_acti == "sigmoid":

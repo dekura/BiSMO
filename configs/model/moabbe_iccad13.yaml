@@ -13,10 +13,10 @@ scheduler:
   factor: 0.1
   patience: 20
 
-# choose from cosine | sigmoid
+# choose from multi | sigmoid
 mask_acti: sigmoid
 mask_sigmoid_steepness: 9
-mask_sigmoid_tr: 0.0
+mask_sigmoid_tr: 0.5
 
 # parameters for lens in SMO model
 lens_n_liquid: 1.44
