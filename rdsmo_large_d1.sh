@@ -15,7 +15,7 @@ device_id=1
 alter_epoch=10
 task_name=rd_large
 
-for i in $(seq 10 -1 1); do
+for i in $(seq 20 -1 11); do
     layout_path=$layout_folder"t"$i"_0_mask.png"
     echo "Starting rdsmo for: $task_name mask "$i
     echo  python src/rdsmo.py trainer.devices="[$device_id]" model.alter_epoch=$alter_epoch task_name=$task_name mask.layout_path=$layout_path
