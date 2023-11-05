@@ -35,7 +35,5 @@ tags: ["dev"]
 smo: True
 
 ckpt_path: null
-
 seed: null
-
-inference: True
+inference: False

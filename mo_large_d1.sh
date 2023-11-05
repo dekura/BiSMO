@@ -1,0 +1,21 @@
+###
+ # @Author: Guojin Chen @ CUHK-CSE
+ # @Homepage: https://gjchen.me
+ # @Date: 2023-10-14 11:00:14
+ # @LastEditTime: 2023-11-05 10:40:17
+ # @Contact: cgjcuhk@gmail.com
+ # @Description:
+###
+
+python=/home/local/eda13/gc29434/miniconda3/envs/smo/bin/python
+layout_folder=/home/local/eda13/gc29434/phd/projects/SMO-DAC24-codes/data/ibm_large_test/
+device_id=1
+task_name=mo_large
+
+
+for i in $(seq 20 -1 11); do
+    layout_path=$layout_folder"t"$i"_0_mask.png"
+    echo "Starting large mo for: $task_name mask "$i
+    echo  python src/moabbe.py trainer.devices="[$device_id]" task_name=$task_name mask.layout_path=$layout_path
+    $python src/moabbe.py trainer.devices="[$device_id]" task_name=$task_name mask.layout_path=$layout_path mask.target_path=$layout_path
+done
