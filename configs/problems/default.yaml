@@ -9,6 +9,8 @@ nmn_iters: 3
 cg_iters: 3
 # for both cg and neumann
 unroll_steps: 2
+# for the learing rate: 0.01 better but slower | 0.1 faster but not best results
+opt_lr: 0.01
 
 mo:
   _target_: src.problems.mo.MO
@@ -25,7 +27,7 @@ mo:
   optimizer_cfg:
     _target_: torch.optim.Adam
     _partial_: true
-    lr: 0.01
+    lr: ${problems.opt_lr}
     weight_decay: 0.0
 
   scheduler_cfg:
@@ -50,7 +52,7 @@ so:
   optimizer_cfg:
     _target_: torch.optim.Adam
     _partial_: true
-    lr: 0.01
+    lr: ${problems.opt_lr}
     weight_decay: 0.0
 
   scheduler_cfg:

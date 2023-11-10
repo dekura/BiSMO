@@ -28,7 +28,7 @@ defaults:
 # to save memory on torch.fft
 cufft_max_cache_size: 1024
 # define the max iters of upper problem
-max_iters: 300
+max_iters: 100
 
 task_name: "bismo"
 

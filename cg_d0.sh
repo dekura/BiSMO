@@ -13,6 +13,6 @@ problems_type=cg
 
 for i in $(seq 10 -1 1); do
     layout_path=$layout_folder"t"$i"_0_mask.png"
-    echo "Starting mo for: problems ["$problems_type"] mask "$i
+    echo "Starting bismo for: problems ["$problems_type"] mask "$i
     $python src/bilevel.py module.device_id=$device_id problems=$problems_type mask.layout_path=$layout_path mask.target_path=$layout_path
 done

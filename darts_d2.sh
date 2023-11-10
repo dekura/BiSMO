@@ -12,6 +12,6 @@ device_id=2
 
 for i in $(seq 10 -1 1); do
     layout_path=$layout_folder"t"$i"_0_mask.png"
-    echo "Starting mo for: problems [nmn] mask "$i
+    echo "Starting bismo for: problems [darts] mask "$i
     $python src/bilevel.py module.device_id=$device_id mask.layout_path=$layout_path mask.target_path=$layout_path
 done
