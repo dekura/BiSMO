@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-04-30 20:11:19
-LastEditTime: 2023-04-30 23:56:51
+LastEditTime: 2023-11-13 09:15:13
 Contact: cgjcuhk@gmail.com
 Description:
 """
@@ -34,24 +34,33 @@ class Mask:
         """
         Process calculation
         """
-        self.open_layout()
-        self.maskfft()
+        # self.open_layout()
+        # self.maskfft()
 
-    def open_layout(self):
+    def open_layout(self, resize=False):
         img = Image.open(self.layout_path)
         img = img.convert("L")
+        target = Image.open(self.target_path)
+        target = target.convert("L")
+
         transform = T.PILToTensor()
         data = transform(img) // 255
+        target_data = transform(target) // 255
+        if resize:
+            # resize_transform = T.Resize((1024, 1024))
+            resize_transform = T.Resize((2048, 2048))
+            data = resize_transform(data)
+            target_data = resize_transform(target_data)
         self.data = data[0]
         self.y_gridnum = self.data.shape[0]
         self.x_gridnum = self.data.shape[1]
-
-        target = Image.open(self.target_path)
-        target = target.convert("L")
-        # 3 channels
-        target_data = transform(target) // 255
-        # 1 channel
         self.target_data = target_data[0]
+
+
+        # 3 channels
+
+
+        # 1 channel
 
     # use the fftw packages
     def maskfft(self):

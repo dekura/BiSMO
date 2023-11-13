@@ -1,3 +1,4 @@
+import math
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -19,6 +20,7 @@ class SO_Module(nn.Module):
         lens_n_liquid: float = 1.44,
         lens_reduction: float = 0.25,
         low_light_thres: float = 0.001,
+        source_batch_size: int = 128,
         device: str = "cuda:0",
     ) -> None:
         super().__init__()
@@ -40,7 +42,7 @@ class SO_Module(nn.Module):
         self.source_sigmoid_steepness = source_sigmoid_steepness
         self.resist_sigmoid_steepness = resist_sigmoid_steepness
         self.resist_intensity = resist_intensity
-
+        self.source_batch_size = source_batch_size
         # activation func
         self.sigmoid_source = nn.Sigmoid()
 
@@ -110,8 +112,8 @@ class SO_Module(nn.Module):
 
         # for sigmoid
         if self.source_acti == "sigmoid":
-            self.source_params.data[torch.where(self.source.data > 0.5)] = 10
-            self.source_params.data.sub_(5)
+            self.source_params.data[torch.where(self.source.data > 0.5)] = 2
+            self.source_params.data.sub_(1)
         elif self.source_acti == "cosine":
             self.source_params.data[torch.where(self.source.data > 0.5)] = 0.1
             self.source_params.data[torch.where(self.source.data <= 0.5)] = torch.pi - 0.1
@@ -195,50 +197,64 @@ class SO_Module(nn.Module):
         mask_fvalue = [self.mask_fvalue_min, self.mask_fvalue_norm, self.mask_fvalue_max]
         for fvalue in mask_fvalue:
             intensity2D = torch.zeros(
-                self.mask.target_data.shape, dtype=torch.float32, device=self.device
+                self.mask.target_data.shape, dtype=torch.float32, device="cuda:3"
             )
-            for i in range(self.simple_source_value.shape[0]):
-                rho2 = (
-                    self.mask_fg2m
-                    + 2
-                    * (
-                        self.simple_source_fx1d[i] * self.mask_fm
-                        + self.simple_source_fy1d[i] * self.mask_gm
+            batch_size = self.source_batch_size
+            n_batches = math.ceil(self.simple_source_value.shape[0] / batch_size)
+            for batch_idx in range(n_batches):
+                start_idx = batch_idx * batch_size
+                end_idx = min(start_idx + batch_size, self.simple_source_value.shape[0])
+                batch = self.simple_source_value[start_idx:end_idx]
+                device_id = batch_idx % 3
+                batch_intensity2D = torch.zeros(
+                    self.mask.target_data.shape, dtype=torch.float32, device=f"cuda:{device_id}"
+                )
+                for i in range(batch.shape[0]):
+                    in_batch_idx = start_idx + i
+                    rho2 = (
+                        self.mask_fg2m
+                        + 2
+                        * (
+                            self.simple_source_fx1d[in_batch_idx] * self.mask_fm
+                            + self.simple_source_fy1d[in_batch_idx] * self.mask_gm
+                        )
+                        + self.simple_source_fxy2[in_batch_idx]
                     )
-                    + self.simple_source_fxy2[i]
-                )
 
-                valid_source_mask = rho2.le(1)
-                f_calc = (
-                    torch.masked_select(self.mask_fm, valid_source_mask)
-                    + self.simple_source_fx1d[i]
-                )
-                g_calc = (
-                    torch.masked_select(self.mask_gm, valid_source_mask)
-                    + self.simple_source_fy1d[i]
-                )
+                    valid_source_mask = rho2.le(1)
+                    f_calc = (
+                        torch.masked_select(self.mask_fm, valid_source_mask)
+                        + self.simple_source_fx1d[in_batch_idx]
+                    )
+                    g_calc = (
+                        torch.masked_select(self.mask_gm, valid_source_mask)
+                        + self.simple_source_fy1d[in_batch_idx]
+                    )
 
-                pupil_fdata = self.cal_pupil(f_calc, g_calc)
+                    pupil_fdata = self.cal_pupil(f_calc, g_calc)
 
-                # 2. calculate mask
-                valid_mask_fdata = torch.masked_select(
-                    fvalue[self.y1 : self.y2, self.x1 : self.x2], valid_source_mask
-                )
+                    # 2. calculate mask
+                    valid_mask_fdata = torch.masked_select(
+                        fvalue[self.y1 : self.y2, self.x1 : self.x2], valid_source_mask
+                    )
 
-                tempHAber = valid_mask_fdata * pupil_fdata
+                    tempHAber = valid_mask_fdata * pupil_fdata
 
-                # 3. calculate intensity
-                ExyzFrequency = torch.zeros(rho2.shape, dtype=torch.complex64, device=self.device)
-                ExyzFrequency[valid_source_mask] = tempHAber
+                    # 3. calculate intensity
+                    ExyzFrequency = torch.zeros(rho2.shape, dtype=torch.complex64, device=f"cuda:{device_id}")
+                    ExyzFrequency[valid_source_mask] = tempHAber.to(f"cuda:{device_id}")
 
-                e_field = torch.zeros(fvalue.shape, dtype=torch.complex64, device=self.device)
-                e_field[self.y1 : self.y2, self.x1 : self.x2] = ExyzFrequency
+                    e_field = torch.zeros(fvalue.shape, dtype=torch.complex64, device=f"cuda:{device_id}")
+                    e_field[self.y1 : self.y2, self.x1 : self.x2] = ExyzFrequency
 
-                AA = torch.fft.fftshift(torch.fft.ifft2(e_field))
-                AA = torch.abs(AA * torch.conj(AA))
-                AA = self.simple_source_value[i] * AA
-                intensity2D += AA
-            normed_intensity2D = intensity2D / self.source_weight / self.norm_Intensity
+                    AA = torch.fft.fftshift(torch.fft.ifft2(e_field))
+                    AA = torch.abs(AA * torch.conj(AA))
+                    AA = batch[i].to(f"cuda:{device_id}") * AA
+                    batch_intensity2D += AA.to(batch_intensity2D)
+                    # torch.cuda.empty_cache()
+                intensity2D += batch_intensity2D.to(intensity2D)
+                # torch.cuda.empty_cache()
+            normed_intensity2D = intensity2D / self.source_weight.to("cuda:3") / self.norm_Intensity.to("cuda:3")
             self.intensity2D_list.append(normed_intensity2D)
             self.RI_list.append(self.sigmoid_resist(normed_intensity2D))
 

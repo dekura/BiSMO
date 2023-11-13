@@ -1,4 +1,5 @@
 _target_: src.betty.configs.EngineConfig
 train_iters: ${eval:'${max_iters}*${problems.unroll_steps}'}
 logger_type: aim
-valid_step: ${eval:'100*${problems.unroll_steps}'}
+logger_repo: ${paths.log_dir}/${task_name}
+valid_step: ${eval:'20*${problems.unroll_steps}'}

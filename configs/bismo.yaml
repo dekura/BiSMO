@@ -7,7 +7,7 @@ defaults:
   - source: iccad13
   - mask: img_mask
   - data: dummy
-  - module: bilevel
+  - module: bilevel_pool
   - engine: default
   - problems: default
   - paths: default
@@ -28,7 +28,7 @@ defaults:
 # to save memory on torch.fft
 cufft_max_cache_size: 1024
 # define the max iters of upper problem
-max_iters: 100
+max_iters: 200
 
 task_name: "bismo"
 
