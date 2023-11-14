@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-10-22 19:09:23
-LastEditTime: 2023-11-13 09:29:05
+LastEditTime: 2023-11-13 19:43:05
 Contact: cgjcuhk@gmail.com
 Description: 
 """
@@ -58,6 +58,7 @@ def logger(
         ):
     logger_type = type_check(logger_type)
     if logger_type == "aim":
+        print(logger_repo)
         return logger_mapping[logger_type](repo=logger_repo)
     else:
         return logger_mapping[logger_type]()
