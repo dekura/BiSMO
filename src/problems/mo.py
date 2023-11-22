@@ -2,7 +2,7 @@
 Author: Guojin Chen @ CUHK-CSE
 Homepage: https://gjchen.me
 Date: 2023-10-22 13:05:39
-LastEditTime: 2023-10-23 22:00:10
+LastEditTime: 2023-11-20 10:48:13
 Contact: cgjcuhk@gmail.com
 Description: the definition of Source optimization problem.
 """
@@ -84,11 +84,13 @@ class MO(ImplicitProblem):
         RI_min = torch.where(RIlist[0] > 0.5, 1.0, 0.0).float()
         RI_norm = torch.where(RIlist[1] > 0.5, 1.0, 0.0).float()
         RI_max = torch.where(RIlist[2] > 0.5, 1.0, 0.0).float()
+        target = self.module.mask.target_data.float()
 
         # RI_pvb = torch.where(RI_min != RI_max, 1.0, 0.0).float()
 
-        l2 = self.criterion(RIlist[1], self.module.mask.target_data.float())
-        pvb = self.criterion(RIlist[1], RIlist[0]) + self.criterion(RIlist[1], RIlist[2])
+        l2 = self.criterion(RIlist[1], target)
+        # pvb = self.criterion(RIlist[1], RIlist[0]) + self.criterion(RIlist[1], RIlist[2])
+        pvb = self.criterion(target, RIlist[0]) + self.criterion(target, RIlist[2])
         loss = l2 * self.weight_l2 + pvb * self.weight_pvb
 
         l2_val = (RI_norm - self.module.mask.target_data).abs().sum()
