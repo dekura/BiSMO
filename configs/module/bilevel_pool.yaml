@@ -1,0 +1,22 @@
+resist_intensity: 0.225
+low_light_thres: 0.001
+device_id: 0
+resist_sigmoid_steepness: 30
+
+mo:
+  _target_: src.models.mo_module.MO_Module
+  mask_acti: sigmoid
+  mask_sigmoid_steepness: 9
+  resist_sigmoid_steepness: ${module.resist_sigmoid_steepness}
+  resist_intensity: ${module.resist_intensity}
+  low_light_thres: ${module.low_light_thres}
+  device: "cuda:${module.device_id}"
+
+so:
+  _target_: src.models.so_module.SO_Module
+  source_acti: sigmoid
+  source_sigmoid_steepness: 2
+  resist_sigmoid_steepness: ${module.resist_sigmoid_steepness}
+  resist_intensity: ${module.resist_intensity}
+  low_light_thres: ${module.low_light_thres}
+  device: "cuda:${module.device_id}"

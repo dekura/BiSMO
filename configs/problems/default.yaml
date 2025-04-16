@@ -1,0 +1,65 @@
+weight_l2: 1000
+weight_pvb: 3000
+device_id: ${module.device_id}
+
+problem_type: darts
+# for neumann_iterations
+nmn_iters: 3
+# for cg_iterations
+cg_iters: 3
+# for both cg and neumann
+unroll_steps: 2
+# for the learing rate: 0.01 better but slower | 0.1 faster but not best results
+opt_lr: 0.01
+
+mo:
+  _target_: src.problems.mo.MO
+  # _partial_: true
+  name: "MO"
+
+  config:
+    _target_: src.betty.configs.Config
+    type: ${problems.problem_type}
+    retain_graph: True
+    log_step: 10
+    # unroll_steps: ${problems.unroll_steps}
+
+  optimizer_cfg:
+    _target_: torch.optim.Adam
+    _partial_: true
+    lr: ${problems.opt_lr}
+    weight_decay: 0.0
+
+  scheduler_cfg:
+    _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+    _partial_: true
+    T_max: ${engine.train_iters}
+
+  weight_l2: ${problems.weight_l2}
+  weight_pvb: ${problems.weight_pvb}
+  device: "cuda:${module.device_id}"
+
+so:
+  _target_: src.problems.so.SO
+  # _partial_: true
+  name: "SO"
+
+  config:
+    _target_: src.betty.configs.Config
+    type: ${problems.problem_type}
+    unroll_steps: ${problems.unroll_steps}
+
+  optimizer_cfg:
+    _target_: torch.optim.Adam
+    _partial_: true
+    lr: ${problems.opt_lr}
+    weight_decay: 0.0
+
+  scheduler_cfg:
+    _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+    _partial_: true
+    T_max: ${engine.train_iters}
+
+  weight_l2: ${problems.weight_l2}
+  weight_pvb: ${problems.weight_pvb}
+  device: "cuda:${module.device_id}"

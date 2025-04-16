@@ -155,3 +155,6 @@ configs/local/default.yaml
 
 
 **.DS_Store
+/data/MNIST
+/data/ibm_*
+/data/ispd_*

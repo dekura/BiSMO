@@ -1,0 +1,7 @@
+defaults:
+  - default
+
+unroll_steps: 5
+so:
+  _target_: src.problems.so_ds.SO
+  mask_scale: 1

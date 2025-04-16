@@ -1,3 +1,11 @@
+"""
+Author: Guojin Chen @ CUHK-CSE
+Homepage: https://gjchen.me
+Date: 2023-10-22 09:37:20
+LastEditTime: 2023-10-23 11:47:45
+Contact: cgjcuhk@gmail.com
+Description: 
+"""
 from lightning.pytorch.utilities import rank_zero_only
 
 from src.utils import pylogger
@@ -16,26 +24,33 @@ def log_hyperparameters(object_dict: dict) -> None:
     hparams = {}
 
     cfg = object_dict["cfg"]
-    model = object_dict["model"]
-    trainer = object_dict["trainer"]
+    # model = object_dict["model"]
+    trainer = object_dict["engine"]
 
     if not trainer.logger:
         log.warning("Logger not found! Skipping hyperparameter logging...")
         return
 
-    hparams["model"] = cfg["model"]
+    # hparams["model"] = cfg["model"]
 
-    # save number of model parameters
-    hparams["model/params/total"] = sum(p.numel() for p in model.parameters())
-    hparams["model/params/trainable"] = sum(
-        p.numel() for p in model.parameters() if p.requires_grad
-    )
-    hparams["model/params/non_trainable"] = sum(
-        p.numel() for p in model.parameters() if not p.requires_grad
-    )
+    # # save number of model parameters
+    # hparams["model/params/total"] = sum(p.numel() for p in model.parameters())
+    # hparams["model/params/trainable"] = sum(
+    #     p.numel() for p in model.parameters() if p.requires_grad
+    # )
+    # hparams["model/params/non_trainable"] = sum(
+    #     p.numel() for p in model.parameters() if not p.requires_grad
+    # )
 
-    hparams["data"] = cfg["data"]
-    hparams["trainer"] = cfg["trainer"]
+    # hparams["data"] = cfg["data"]
+    hparams["cufft_max_cache_size"] = cfg["cufft_max_cache_size"]
+    hparams["engine"] = cfg["engine"]
+    hparams["source"] = cfg.get("source")
+    hparams["mask"] = cfg.get("mask")
+    hparams["module"] = cfg.get("module")
+    hparams["engine"] = cfg.get("engine")
+    hparams["problems"] = cfg.get("problems")
+
 
     hparams["callbacks"] = cfg.get("callbacks")
     hparams["extras"] = cfg.get("extras")
@@ -45,6 +60,7 @@ def log_hyperparameters(object_dict: dict) -> None:
     hparams["ckpt_path"] = cfg.get("ckpt_path")
     hparams["seed"] = cfg.get("seed")
 
+
     # send hparams to all loggers
-    for logger in trainer.loggers:
-        logger.log_hyperparams(hparams)
+    # for logger in trainer.loggers:
+    trainer.logger.log_hyperparams(hparams)

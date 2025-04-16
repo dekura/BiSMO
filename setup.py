@@ -1,21 +1,60 @@
-#!/usr/bin/env python
+from setuptools import setup, find_packages
 
-from setuptools import find_packages, setup
 
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
+with open("betty/version.txt", "r") as fv:
+    version = fv.read()
+
+with open("requirements/requirements.txt", "r") as f:
+    requirements = f.read().splitlines()
+
+description = (
+    "An automatic differentiation library for multilevel optimization and "
+    "generalized meta-learning"
+)
+
+python_requires = ">=3.6.0,<3.11.0"
+
+# run setup
 setup(
-    name="src",
-    version="0.0.1",
-    description="Describe Your Cool Project",
-    author="",
-    author_email="",
-    url="https://github.com/user/project",
-    install_requires=["pytorch-lightning", "hydra-core"],
-    packages=find_packages(),
-    # use this to customize global commands available in the terminal after installing the package
-    entry_points={
-        "console_scripts": [
-            "train_command = src.train:main",
-            "eval_command = src.eval:main",
+    name="betty",
+    version=version,
+    author="Sang Choe",
+    author_email="sangkeun00@gmail.com",
+    description=description,
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    url="https://github.com/leopard-ai/betty",
+    keywords=[
+        "meta-learning",
+        "pytorch",
+        "multilevel optimization",
+        "machine learning",
+        "artificial intelligence",
+    ],
+    packages=find_packages(
+        exclude=[
+            "examples",
+            "docs",
+            "tests",
+            "tutorials",
         ]
-    },
+    ),
+    install_requires=requirements,
+    license="Apache",
+    python_requires=python_requires,
+    # Not sure
+    include_package_data=True,
+    classifiers=[
+        "Intended Audience :: Science/Research",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "License :: OSI Approved :: Apache Software License",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+    ],
 )
