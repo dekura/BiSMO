@@ -158,3 +158,6 @@ configs/local/default.yaml
 /data/MNIST
 /data/ibm_*
 /data/ispd_*
+src/betty-bk
+src/betty1
+resources/

@@ -31,7 +31,6 @@ class Engine:
 
         # logger
         self.logger_type = None
-        self.logger_repo = None
         self.logger = None
 
         # problem
@@ -71,7 +70,6 @@ class Engine:
         self.valid_step = self.config.valid_step
 
         self.logger_type = self.config.logger_type
-        self.logger_repo = self.config.logger_repo
 
         self._roll_back = self.config.roll_back
 
@@ -133,7 +131,7 @@ class Engine:
         dist_dict = self.configure_systems()
 
         # initialize logger
-        self.logger = logger(logger_type=self.logger_type, logger_repo=self.logger_repo)
+        self.logger = logger(logger_type=self.logger_type)
         if self.is_rank_zero():
             self.logger.info("Initializing Multilevel Optimization...\n")
         start = time.time()

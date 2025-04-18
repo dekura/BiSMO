@@ -12,7 +12,6 @@ class EngineConfig:
 
     # logger
     logger_type: str = "none"
-    logger_repo: str = "none"
 
     # roll back
     roll_back: bool = False
