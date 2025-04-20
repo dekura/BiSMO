@@ -8,7 +8,7 @@
 ###
 python=/home/local/eda13/gc29434/miniconda3/envs/smo/bin/python
 layout_folder=/home/local/eda13/gc29434/phd/projects/SMO-DAC24-codes/data/ibm_large_test/
-device_id=1
+device_id=1 
 problems_type=rl
 
 for i in $(seq 20 -1 11); do
