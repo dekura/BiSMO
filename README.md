@@ -6,7 +6,6 @@
 
 BiSMO is a PyTorch-based framework for bilevel optimization in lithography applications, specifically for Source Mask Optimization (SMO). It provides a modular and efficient approach to solve the complex optimization problems in lithography by leveraging bilevel optimization techniques.
 
-The framework is built on top of [Betty](https://github.com/leopard-ai/betty), an automatic differentiation library for generalized meta-learning and multilevel optimization.
 
 ## Installation
 
