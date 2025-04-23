@@ -1,0 +1,31 @@
+# @package _global_
+
+# Configuration for the reinforcement learning (RL) approach
+problems:
+  mo:
+    _target_: src.problems.mo.MO
+    config:
+      type: rl
+      env_id: BeamRiderNoFrameskip-v4
+      seed: 3
+      device: cuda
+      torch_deterministic: true
+      cuda: true
+      track: true
+      buffer_size: 1000000  # 1e6 experience replay buffer capacity
+      gamma: 0.99  # discount factor
+      tau: 1.0
+      batch_size: 64  # training batch size
+      policy_lr: 0.0001  # 1e-4 policy network learning rate
+      q_lr: 0.0001  # 1e-4 Q-network learning rate
+      reward_lr: 0.0003  # 3e-4 reward network learning rate
+      alpha: 0.2  # entropy regularization coefficient
+      alternate: 10000  # alternating frequency between preference collection and policy optimization
+      autotune: true
+      target_entropy_scale: 0.89
+      
+  so:
+    _target_: src.problems.so.SO
+    config:
+      type: sgd
+      lr: 1e-3 

@@ -14,5 +14,8 @@ problems_type=rl
 for i in $(seq 10 -1 1); do
     layout_path=$layout_folder"t"$i"_0_mask.png"
     echo "Starting bismo for: problems ["$problems_type"] mask "$i
-    $python src/bilevel.py module.device_id=$device_id problems=$problems_type mask.layout_path=$layout_path mask.target_path=$layout_path
+    $python src/bilevel.py module.device_id=$device_id problems=$problems_type mask.layout_path=$layout_path mask.target_path=$layout_path \
+    problems.mo.config.policy_lr=0.0001 problems.mo.config.q_lr=0.0001 problems.mo.config.reward_lr=0.0003 \
+    problems.mo.config.gamma=0.99 problems.mo.config.alpha=0.2 problems.mo.config.buffer_size=1000000 \
+    problems.mo.config.batch_size=64 problems.mo.config.alternate=10000
 done
